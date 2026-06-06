@@ -1,5 +1,5 @@
-import RegisterCitizen from "../register-citizen";
+import  Login  from "../login";
 
 export default function HomeScreen() {
-  return <RegisterCitizen />;
+  return <Login />;
 }
