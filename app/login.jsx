@@ -61,6 +61,38 @@ export default function Login() {
 
         }
 
+        else if (userData.role === "medic"){
+
+          if (userData.status === "approved") {
+            router.replace(
+              "/medic/dashboard"
+            );
+
+          } else if (userData.status === "pending") {
+
+            Alert.alert(
+              "Pending Approval",
+              "Your account is still pending approval. Please wait for an admin to approve your account."
+            );
+
+          } else if (userData.status === "rejected") {
+
+            Alert.alert(
+              "Account Rejected",
+              "Your account has been rejected. Please contact support for more information."
+            );
+
+          }
+
+        }  
+        
+        else if (userData.role === "admin") {
+          router.replace(
+            "/admin/dashboard"
+          );
+
+        }
+
       }
   } catch (error) {
 
