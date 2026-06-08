@@ -15,8 +15,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert
-
+  Alert,
+  ScrollView
 } from "react-native";
 
 import { useState } from "react";
@@ -107,7 +107,13 @@ export default function Login() {
 
 
   return (
-    <View style={{ padding: 20 }}>
+    <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: "#EAF4FF",
+        padding: 20
+      }}
+    >
 
       <Text
         style={{
@@ -145,9 +151,10 @@ export default function Login() {
       <TouchableOpacity
         onPress={handleLogin}
         style={{
-          backgroundColor: "blue",
+          backgroundColor: "#0057B8",
           padding: 15,
-          borderRadius: 10
+          borderRadius: 15,
+          marginTop: 10
         }}
       >
         <Text
@@ -160,7 +167,7 @@ export default function Login() {
         </Text>
       </TouchableOpacity>
 
-    </View>
+    </ScrollView>
   );
 }
 

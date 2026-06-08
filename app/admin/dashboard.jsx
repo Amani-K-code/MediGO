@@ -83,7 +83,13 @@ export default function AdminDashboard() {
 
   return (
 
-    <ScrollView style={{ padding: 20 }}>
+    <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: "#EAF4FF",
+        padding: 20
+      }}
+    >
 
       <Text
         style={{
@@ -100,9 +106,10 @@ export default function AdminDashboard() {
         <View
           key={medic.id}
           style={{
-            borderWidth: 1,
-            padding: 10,
-            marginBottom: 10
+            backgroundColor: "white",
+            padding: 20,
+            borderRadius: 20,
+            marginBottom: 15
           }}
         >
 
@@ -117,9 +124,10 @@ export default function AdminDashboard() {
           <TouchableOpacity
             onPress={() => approveMedic(medic.id)}
             style={{
-              backgroundColor: "green",
-              padding: 10,
-              marginTop: 10
+              backgroundColor: "#198754",
+              padding: 12,
+              marginTop: 10,
+              borderRadius: 12
             }}
           >
             <Text style={{ color: "white" }}>
@@ -130,9 +138,10 @@ export default function AdminDashboard() {
           <TouchableOpacity
             onPress={() => rejectMedic(medic.id)}
             style={{
-              backgroundColor: "red",
-              padding: 10,
-              marginTop: 10
+              backgroundColor: "#D62828",
+              padding: 12,
+              marginTop: 10,
+              borderRadius: 12
             }}
           >
             <Text style={{ color: "white" }}>

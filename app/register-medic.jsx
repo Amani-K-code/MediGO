@@ -158,9 +158,10 @@ export default function RegisterMedic() {
       <TouchableOpacity
         onPress={handleRegister}
         style={{
-          backgroundColor: "green",
-          padding: 15,
-          borderRadius: 10
+            backgroundColor: "#0057B8",
+            padding: 15,
+            borderRadius: 15,
+            marginTop: 10
         }}
       >
         <Text

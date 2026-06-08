@@ -126,9 +126,9 @@ export default function RegisterCitizen(){
       <TouchableOpacity
         onPress={handleRegister}
         style={{
-          backgroundColor: "red",
+          backgroundColor: "#0057B8",
           padding: 15,
-          borderRadius: 10
+          borderRadius: 15
         }}
       >
         <Text style={{ color: "white", textAlign: "center" }}>
