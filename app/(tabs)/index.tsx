@@ -1,98 +1,191 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function WelcomeScreen() {
+  const router = useRouter();
 
-export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <LinearGradient
+      colors={["#1565C0", "#1976D2", "#2196F3"]}
+      style={styles.gradient}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#1565C0" />
+      <SafeAreaView style={styles.safeArea}>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* Logo + Branding */}
+        <View style={styles.brandingContainer}>
+          <View style={styles.logoWrapper}>
+            {/* Map pin with medical cross — inline SVG-style using View */}
+            <View style={styles.logoOuter}>
+              <View style={styles.logoPin}>
+                <View style={styles.crossHorizontal} />
+                <View style={styles.crossVertical} />
+              </View>
+              <View style={styles.logoPinPoint} />
+            </View>
+          </View>
+
+          <Text style={styles.appName}>MediGo</Text>
+          <Text style={styles.tagline}>Emergency care, instantly.</Text>
+        </View>
+
+        {/* CTA Buttons */}
+        <View style={styles.ctaContainer}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push("/register-citizen")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.primaryButtonText}>Sign Up as Citizen</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.push("/register-medic")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.secondaryButtonText}>Sign Up as Healthcare Facility</Text>
+          </TouchableOpacity>
+
+          <View style={styles.loginRow}>
+            <Text style={styles.loginPrompt}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.push("/login")}>
+              <Text style={styles.loginLink}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  gradient: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  safeArea: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+
+  // Branding
+  brandingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoWrapper: {
+    marginBottom: 24,
+  },
+  logoOuter: {
+    width: 90,
+    height: 110,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  logoPin: {
+    width: 52,
+    height: 52,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 26,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  crossHorizontal: {
+    position: "absolute",
+    width: 28,
+    height: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 3,
+  },
+  crossVertical: {
+    position: "absolute",
+    width: 10,
+    height: 28,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 3,
+  },
+  logoPinPoint: {
+    width: 14,
+    height: 14,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: 7,
+    marginTop: 6,
+    transform: [{ rotate: "45deg" }],
+  },
+  appName: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  tagline: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.7)",
+    letterSpacing: 0.3,
+  },
+
+  // CTA
+  ctaContainer: {
+    width: "100%",
+    gap: 12,
+  },
+  primaryButton: {
+    backgroundColor: "#FFFFFF",
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  primaryButtonText: {
+    color: "#1565C0",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  secondaryButton: {
+    backgroundColor: "transparent",
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  secondaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  loginRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  loginPrompt: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 14,
+  },
+  loginLink: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });
