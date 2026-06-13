@@ -1,15 +1,6 @@
 import {View, Text, TextInput, TouchableOpacity, Alert, ScrollView} from 'react-native';
 import { useState } from "react";
-import { auth, db } from "../firebase/firebaseConfig";
-
-import {
-    createUserWithEmailAndPassword,
-} from "firebase/auth";
-
-import {
-    doc,
-    setDoc,
-} from "firebase/firestore";
+import {registerCitizen} from "./services/authService";
 
 export default function RegisterCitizen(){
 
@@ -25,45 +16,21 @@ export default function RegisterCitizen(){
 
         try {
 
-            const userCredential =
-            await createUserWithEmailAndPassword(
-                auth, 
+            await registerCitizen(
+                fullName,
                 email,
+                phone,
+                nextOfKin,
+                nextOfKinPhone,
+                residence,
                 password
             );
 
-            const user = userCredential.user;
-
-            await setDoc(
-                doc (db, "users", user.uid),
-                {
-                    fullName,
-                    email,
-                    phone,
-                    nextOfKin,
-                    nextOfKinPhone,
-                    residence,
-                    role: "citizen",
-                    createdAt: new Date()
-                }
-            );
-
-            Alert.alert(
-                "Success", 
-                "Citizen account created successfully!"
-            );
-
-        } catch (error) {
-
-            console.log("Error:", error);
-
-            Alert.alert(
-                "Registration Error",
-                error.message
-            );
-
-        }
-
+            Alert.alert("Success", "Registration successful!");
+            
+          } catch (error) {
+            Alert.alert("Registration Error", error.message);
+          }
     };
 
     return (

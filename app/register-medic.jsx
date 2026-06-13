@@ -1,5 +1,4 @@
 import {
-  View, 
   Text,
   TextInput,
   TouchableOpacity,
@@ -9,16 +8,7 @@ import {
 
 import { useState } from "react";
 
-import { auth, db } from "../firebase/firebaseConfig";
-
-import {
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-
-import {
-  doc,
-  setDoc,
-} from "firebase/firestore";
+import { registerMedic } from "./services/authService";
 
 export default function RegisterMedic() {
 
@@ -33,47 +23,23 @@ export default function RegisterMedic() {
 
     try {
 
-      const userCredential =
-        await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
-      const user = userCredential.user;
-
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          establishmentName,
-          email,
-          phone,
-          licenseNumber,
-          location,
-
-          role: "medic",
-
-          status: "pending",
-
-          createdAt: new Date()
-        }
+      await registerMedic(
+        establishmentName,
+        email,
+        phone,
+        licenseNumber,
+        location,
+        password
       );
 
-      Alert.alert(
-        "Success",
-        "Medic registered successfully"
-      );
+      Alert.alert("Success", "Registration successful!");
 
     } catch (error) {
-
-      Alert.alert(
-        "Error",
-        error.message
-      );
+      Alert.alert("Registration Error", error.message);
 
     }
 
-  };
+    };
 
   return (
      <ScrollView style={{ padding: 20 }}>
