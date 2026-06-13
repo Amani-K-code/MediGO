@@ -9,6 +9,7 @@ import {
 import {
     doc,
     setDoc,
+    getDoc,
 } from "firebase/firestore";
 
 export const registerCitizen = async (
@@ -82,16 +83,30 @@ export const registerMedic = async (
 
     };
 
-    export const login = async (
+    export const loginUser = async (
         email,
         password
     ) => {
 
-        return await signInWithEmailAndPassword(
-            auth,
-            email,
-            password
-        );
+        const userCredential =
+            await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
+        const user = userCredential.user;
+
+        const docSnap =
+            await getDoc(
+                doc(db, "users", user.uid)
+            );
+
+        if (!docSnap.exists()) {
+         throw new Error("User data not found");
+        }
+
+        return docSnap.data();
 
     };
 
