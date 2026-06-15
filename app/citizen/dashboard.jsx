@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet } from "react-native";
 import { Home, HeartPulse, Ambulance, User, Settings, ShieldAlert, MapPin, Search, Navigation } from "lucide-react-native";
+import MapView, { Marker } from "react-native-maps";
 
 const { width, height } = Dimensions.get("window");
 
@@ -9,9 +10,9 @@ export default function CitizenDashboard() {
 
   // Mock Data matching Database Collections
   const hospitals = [
-    { id: "1", name: "Nairobi West Hospital", distance: "1.2 km", tag: "Trauma Center" },
-    { id: "2", name: "Lifecare Hospital", distance: "2.8 km", tag: "General Clinic" },
-    { id: "3", name: "Athi River Medical Centre", distance: "4.1 km", tag: "Pharmacy/Facility" },
+    { id: "1", name: "Nairobi West Hospital", latitude: -1.286389, longitude: 36.817223, distance: "1.2 km", tag: "Trauma Center" },
+    { id: "2", name: "Lifecare Hospital", latitude: -1.287389, longitude: 36.818223, distance: "2.8 km", tag: "General Clinic" },
+    { id: "3", name: "Athi River Medical Centre", latitude: -1.288389, longitude: 36.819223, distance: "4.1 km", tag: "Pharmacy/Facility" },
   ];
 
   const firstAidSkills = [
@@ -26,24 +27,26 @@ export default function CitizenDashboard() {
         {activeTab === "home" && (
           <View style={{ flex: 1 }}>
             {/* Simulated Map Layer (Full bleed visual representation) */}
-            <View style={styles.mockMap}>
-              <View style={styles.mapGridLines} />
-              <View style={[styles.pulseDot, { top: height * 0.3, left: width * 0.4 }]} />
-              <View style={[styles.hospitalPin, { top: height * 0.2, left: width * 0.6 }]}>
-                <MapPin color="white" size={16} />
-              </View>
-              
-              {/* Floating Top Geohash Coordinate Card */}
-              <View style={styles.floatingHeader}>
-                <View style={styles.locationBadge}>
-                  <MapPin color="#D62828" size={18} />
-                  <View style={{ marginLeft: 8 }}>
-                    <Text style={styles.locTitle}>Athi River, Kenya</Text>
-                    <Text style={styles.locSub}>Accuracy 5m • Live Tracking</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
+            <MapView
+              style={styles.mockMap}
+              initialRegion={{
+                latitude: -1.286389,
+                longitude: 36.817223,
+                latitudeDelta: 0.15,
+                longitudeDelta: 0.15,
+              }}
+            >
+              {hospitals.map((hospital) => (
+                <Marker
+                  key={hospital.id}
+                  coordinate={{
+                    latitude: hospital.latitude,
+                    longitude: hospital.longitude,
+                  }}
+                  title={hospital.name}
+                />
+              ))}
+            </MapView>
 
             {/* Absolute High-Contrast SOS Distress Assembly */}
             <View style={styles.sosWrapper}>
