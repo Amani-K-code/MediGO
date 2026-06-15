@@ -201,30 +201,7 @@ export default function RegisterCitizen() {
               keyboardType="phone-pad"
             />
 
-            {/* ── Standby Patient Banner ── */}
-            <View style={styles.standbyCard}>
-              <View style={styles.standbyIconBox}>
-                <Ionicons name="medkit-outline" size={22} color="#0057B8" />
-              </View>
-              <View style={styles.standbyText}>
-                <Text style={styles.standbyTitle}>Standby Patient</Text>
-                <Text style={styles.standbyDesc}>
-                  Registering a chronic condition helps emergency responders
-                  provide better care faster.
-                </Text>
-                <View style={styles.standbyToggleRow}>
-                  <Text style={styles.standbyToggleLabel}>
-                    Do you have a chronic condition?
-                  </Text>
-                  <Switch
-                    value={false}
-                    onValueChange={() => {}}
-                    trackColor={{ false: "#D1D5DB", true: "#0057B8" }}
-                    thumbColor="#FFFFFF"
-                  />
-                </View>
-              </View>
-            </View>
+            
 
             {/* ── Submit ── */}
             <TouchableOpacity

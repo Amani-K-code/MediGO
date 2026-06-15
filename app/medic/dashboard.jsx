@@ -7,7 +7,7 @@ export default function MedicDashboard() {
 
   // Mock Active Requests matching database document structures
   const activeRequests = [
-    { id: "101", citizen: "John Doe", type: "Critical Trauma", time: "2 mins ago", loc: "Sector 4 Block B" },
+    { id: "101", citizen: "Mark Kamau", type: "Critical Trauma", time: "2 mins ago", loc: "Sector 4 Block B" },
   ];
 
   return (
