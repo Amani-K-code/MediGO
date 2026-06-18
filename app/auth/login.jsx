@@ -1,4 +1,4 @@
-import { loginUser } from "./services/authService";
+import { loginUser } from "../services/authService";
 import {
   View,
   Text,
@@ -88,7 +88,7 @@ export default function LoginScreen() {
 
           {/* Logo */}
           <Image
-            source={require("../assets/images/MediGo_favicon.png")}
+            source={require("../../assets/images/MediGo_favicon.png")}
             style={{
               width: 64,
               height: 64,

@@ -1,19 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet } from "react-native";
 import { Home, HeartPulse, Ambulance, User, Settings, ShieldAlert, MapPin, Search, Navigation } from "lucide-react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Callout } from "react-native-maps";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../firebase/firebaseConfig";
+
 
 const { width, height } = Dimensions.get("window");
 
 export default function CitizenDashboard() {
   const [activeTab, setActiveTab] = useState("home");
+  const [medics, setMedics] = useState([]);
 
-  // Mock Data matching Database Collections
-  const hospitals = [
-    { id: "1", name: "Nairobi West Hospital", latitude: -1.286389, longitude: 36.817223, distance: "1.2 km", tag: "Trauma Center" },
-    { id: "2", name: "Lifecare Hospital", latitude: -1.287389, longitude: 36.818223, distance: "2.8 km", tag: "General Clinic" },
-    { id: "3", name: "Athi River Medical Centre", latitude: -1.288389, longitude: 36.819223, distance: "4.1 km", tag: "Pharmacy/Facility" },
-  ];
+  const fetchMedics = async () => {
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "medic"),
+      where("status", "==", "approved")
+    );
+
+    const snapshot = await getDocs(q);
+    const medicList = [];
+
+    snapshot.forEach((doc) => {
+      medicList.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    setMedics(medicList);
+  };
+
+  useEffect(() => {
+    fetchMedics();
+  }, []);
+
 
   const firstAidSkills = [
     { title: "Adult CPR", category: "Cardiac", eta: "Immediate" },
@@ -36,17 +58,20 @@ export default function CitizenDashboard() {
                 longitudeDelta: 0.15,
               }}
             >
-              {hospitals.map((hospital) => (
-                <Marker
-                  key={hospital.id}
-                  coordinate={{
-                    latitude: hospital.latitude,
-                    longitude: hospital.longitude,
-                  }}
-                  title={hospital.name}
-                />
-              ))}
+            {medics.map((medic) => (
+              <Marker
+                key={medic.id}
+                coordinate={{
+                  latitude: Number(medic.latitude),
+                  longitude: Number(medic.longitude),
+                }}
+                pinColor="red"
+                title={medic.establishmentName}
+                description={medic.providerType}
+              />
+            ))}
             </MapView>
+
 
             {/* Absolute High-Contrast SOS Distress Assembly */}
             <View style={styles.sosWrapper}>
@@ -68,22 +93,22 @@ export default function CitizenDashboard() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 220 }}>
-                {hospitals.map((hosp) => (
-                  <View key={hosp.id} style={styles.facilityCard}>
+                {medics.map((medic) => (
+                  <View key={medic.id} style={styles.facilityCard}>
                     <View style={styles.cardLeft}>
                       <View style={styles.iconCircle}>
                         <Ambulance color="#0057B8" size={20} />
                       </View>
+
                       <View style={{ marginLeft: 12 }}>
-                        <Text style={styles.facilityName}>{hosp.name}</Text>
-                        <Text style={styles.facilityTag}>{hosp.tag}</Text>
+                        <Text style={styles.facilityName}>
+                          {medic.establishmentName}
+                        </Text>
+
+                        <Text style={styles.facilityTag}>
+                          {medic.providerType}
+                        </Text>
                       </View>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={styles.distanceText}>{hosp.distance}</Text>
-                      <TouchableOpacity style={styles.routeBtn}>
-                        <Navigation color="white" size={12} />
-                      </TouchableOpacity>
                     </View>
                   </View>
                 ))}

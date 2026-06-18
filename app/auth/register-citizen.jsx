@@ -1,22 +1,24 @@
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  StatusBar,
-  ActivityIndicator,
-  Switch,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { registerCitizen } from "./services/authService";
+import { useRouter } from "expo-router";
+import { useState,useEffect } from "react";
+import { Callout } from "react-native-maps";
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { registerCitizen } from "../services/authService";
+import * as Location from "expo-location";
+import MapView, { Marker } from "react-native-maps";
 
 export default function RegisterCitizen() {
   const router = useRouter();
@@ -29,6 +31,7 @@ export default function RegisterCitizen() {
   const [nextOfKinPhone, setNextOfKinPhone] = useState("");
   const [residence, setResidence] = useState("");
   const [password, setPassword] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
 
   // --- UI-only state (not sent to backend) ---
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,6 +41,13 @@ export default function RegisterCitizen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
+    if (!userLocation) {
+      Alert.alert(
+        "Location Required",
+        "Please enable location services before registering."
+      );
+      return;
+    }
     if (!fullName || !email || !phone || !residence || !password) {
       Alert.alert("Missing Fields", "Please fill in all required fields.");
       return;
@@ -60,10 +70,12 @@ export default function RegisterCitizen() {
         nextOfKin.trim(),
         nextOfKinPhone.trim(),
         residence.trim(),
-        password
+        userLocation?.latitude || null,
+        userLocation?.longitude || null,
+        password,
       );
       Alert.alert("Account Created!", "Welcome to MediGo.", [
-        { text: "Log In", onPress: () => router.replace("/login") },
+        { text: "Log In", onPress: () => router.replace("/auth/login") },
       ]);
     } catch (error) {
       const msg =
@@ -74,7 +86,36 @@ export default function RegisterCitizen() {
     } finally {
       setIsLoading(false);
     }
+  }
+  const getUserLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Location permission is required to access your current location."
+      );
+      return;
+    }
+
+    try {
+    const loc = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest});
+    
+    setUserLocation({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+
   };
+  useEffect(() => {
+    getUserLocation();
+  }, []);
+
+  {/*-- debugging */}
+  console.log("User Location:", userLocation);
 
   return (
     <View style={styles.root}>
@@ -90,7 +131,10 @@ export default function RegisterCitizen() {
             showsVerticalScrollIndicator={false}
           >
             {/* Header */}
-            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.back()}
+            >
               <Ionicons name="arrow-back" size={20} color="#1F2937" />
             </TouchableOpacity>
 
@@ -201,7 +245,28 @@ export default function RegisterCitizen() {
               keyboardType="phone-pad"
             />
 
-            
+            <MapView
+              style={{
+                height: 250,
+                borderRadius: 16,
+                marginBottom: 20,
+               }}
+              region={{
+                latitude: userLocation?.latitude || -1.286389,
+                longitude: userLocation?.longitude || 36.817223,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
+            >
+
+            {userLocation && (
+              <Marker
+                coordinate={userLocation}
+                title="You"
+                pinColor="blue"
+              />
+            )}
+            </MapView>
 
             {/* ── Submit ── */}
             <TouchableOpacity
@@ -213,7 +278,7 @@ export default function RegisterCitizen() {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitBtnText}>Create Account  →</Text>
+                <Text style={styles.submitBtnText}>Create Account →</Text>
               )}
             </TouchableOpacity>
 
@@ -252,12 +317,12 @@ function InputField({
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}
       />
-      {icon && (
-        <Ionicons name={icon} size={18} color="#9CA3AF" />
-      )}
+      {icon && <Ionicons name={icon} size={18} color="#9CA3AF" />}
     </View>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F0F2FF" },

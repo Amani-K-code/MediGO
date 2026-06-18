@@ -15,15 +15,18 @@ import { useState } from "react";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { registerMedic } from "./services/authService";
+import { registerMedic } from "../services/authService";
+import * as Location from "expo-location";
+import MapView, { Marker } from "react-native-maps";
+import { db } from "../../firebase/firebaseConfig";
 
 // ── Facility type options (UI only — maps to `location` label context) ──
-const FACILITY_TYPES = [
-  { key: "Hospital", icon: "hospital-box-outline", lib: "mci" },
-  { key: "Clinic", icon: "office-building-outline", lib: "mci" },
-  { key: "Ambulance", icon: "ambulance", lib: "mci" },
-  { key: "Trauma Center", icon: "shield-cross-outline", lib: "mci" },
-];
+// const FACILITY_TYPES = [
+//   { key: "Hospital", icon: "hospital-box-outline", lib: "mci" },
+//   { key: "Clinic", icon: "office-building-outline", lib: "mci" },
+//   { key: "Ambulance", icon: "ambulance", lib: "mci" },
+//   { key: "Trauma Center", icon: "shield-cross-outline", lib: "mci" },
+// ];
 
 export default function RegisterMedic() {
   const router = useRouter();
@@ -35,6 +38,16 @@ export default function RegisterMedic() {
   const [licenseNumber, setLicenseNumber] = useState("");
   const [location, setLocation] = useState("");
   const [password, setPassword] = useState("");
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [providerType, setProviderType] = useState("facility");
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -1.286389,
+    longitude: 36.817223,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
   // --- UI-only state (Possible additions to authService.js)---
   const [facilityType, setFacilityType] = useState("Hospital");
@@ -57,21 +70,31 @@ export default function RegisterMedic() {
       Alert.alert("Weak Password", "Password must be at least 6 characters.");
       return;
     }
+    if (latitude === null || longitude === null) {
+      Alert.alert(
+        "Location Required",
+        "Please tap 'Get Current Location' first."
+      );
+      return;
+    }
 
     setIsLoading(true);
     try {
       await registerMedic(
         establishmentName,
+        providerType,
         email,
         phone,
         licenseNumber,
         location,
-        password
+        latitude,
+        longitude,
+        password,
       );
       Alert.alert(
         "Facility Registered!",
         "Your account is pending admin verification. You'll be notified once approved.",
-        [{ text: "OK", onPress: () => router.replace("/login") }]
+        [{ text: "OK", onPress: () => router.replace("/auth/login") }]
       );
     } catch (error) {
       const msg =
@@ -82,6 +105,26 @@ export default function RegisterMedic() {
     } finally {
       setIsLoading(false);
     }
+  };
+  const getLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "Location permission is required to register.");
+      return;
+    }
+
+    const loc = 
+      await Location.getCurrentPositionAsync({});
+
+    setLatitude(loc.coords.latitude);
+    setLongitude(loc.coords.longitude);
+    setMapRegion({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+
   };
 
   return (
@@ -115,37 +158,37 @@ export default function RegisterMedic() {
 
             {/* ── Facility Type Selector ── */}
             <Text style={styles.sectionLabel}>Facility Type</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.facilityTypeRow}
-            >
-              {FACILITY_TYPES.map((ft) => {
-                // const isActive = facilityType === ft.key;
-                return (
-                  <TouchableOpacity
-                    key={ft.key}
-                    // style={[styles.facilityChip, isActive && styles.facilityChipActive]}
-                    // onPress={() => setFacilityType(ft.key)}
-                    activeOpacity={0.8}
-                  >
-                    <MaterialCommunityIcons
-                      name={ft.icon}
-                      size={26}
-                      // color={isActive ? "#FFFFFF" : "#6B7280"}
-                    />
-                    <Text
-                      style={[
-                        styles.facilityChipLabel,
-                        // isActive && styles.facilityChipLabelActive,
-                      ]}
-                    >
-                      {ft.key}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+            <View style={[styles.row, { marginBottom: 16 }]}>
+              <TouchableOpacity
+                onPress={() => setProviderType("facility")}
+                style={[
+                  styles.providerBtn,
+                  providerType === "facility" && styles.providerBtnActive
+                ]}
+              >
+                <Text style={[
+                  styles.providerBtnText,
+                  providerType === "facility" && styles.providerBtnTextActive
+                ]}>
+                  Healthcare Facility
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setProviderType("ambulance")}
+                style={[
+                  styles.providerBtn,
+                  providerType === "ambulance" && styles.providerBtnActive
+                ]}
+              >
+                <Text style={[
+                  styles.providerBtnText,
+                  providerType === "ambulance" && styles.providerBtnTextActive
+                ]}>
+                  Ambulance Service
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             {/* ── Facility Details ── */}
             <InputField
@@ -264,6 +307,121 @@ export default function RegisterMedic() {
               </View>
             </View>
 
+            {/* ── Get Location Section ── */}
+            {/* <TouchableOpacity
+              onPress={getLocation}
+              style={{
+                backgroundColor: "#0057B8",
+                padding: 15,
+                borderRadius: 16,
+                marginTop: 10,
+                marginBottom: 12
+              }}
+            >
+              <Text style={{ color: "white", textAlign: "center", fontWeight: "600" }}>
+                Get Current Location
+              </Text>
+            </TouchableOpacity> */}
+
+            {/* Embedded Map Layout */}
+            <View
+              style={{
+                borderRadius: 16,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                marginBottom: 12,
+                position: "relative",
+              }}
+            >
+              <MapView
+                style={{ height: 250 }}
+                region={mapRegion}
+                onRegionChangeComplete={(region) => {
+                  setMapRegion(region);
+                }}
+              />
+
+              {/* Fixed crosshair */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: [
+                    { translateX: -15 },
+                    { translateY: -30 },
+                  ],
+                }}
+              >
+                <Ionicons
+                  name="location"
+                  size={30}
+                  color="#D32F2F"
+                />
+              </View>
+            </View>
+
+            {/* Confirm Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#0057B8",
+                padding: 12,
+                borderRadius: 12,
+                marginBottom: 12,
+              }}
+              onPress={() => {
+                setLatitude(mapRegion.latitude);
+                setLongitude(mapRegion.longitude);
+
+                Alert.alert(
+                  "Location Selected",
+                  `Lat: ${mapRegion.latitude.toFixed(6)}\nLng: ${mapRegion.longitude.toFixed(6)}`
+                );
+              }}
+            >
+              <Text
+                style={{
+                  color: "#fff",
+                  textAlign: "center",
+                  fontWeight: "600",
+                }}
+              >
+                Confirm Location
+              </Text>
+            </TouchableOpacity>
+
+            {/* Selected Coordinates */}
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 16,
+              }}
+            >
+              <Text>
+                Latitude:{" "}
+                {latitude !== null
+                  ? latitude.toFixed(6)
+                  : "Not selected"}
+              </Text>
+
+              <Text>
+                Longitude:{" "}
+                {longitude !== null
+                  ? longitude.toFixed(6)
+                  : "Not selected"}
+              </Text>
+            </View>
+
+            {/* Debugging telemetry readout inside scroll area */}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 16 }}>
+              <Text style={{ fontSize: 12, color: "#6B7280" }}>Lat: {latitude || "Not set"}</Text>
+              <Text style={{ fontSize: 12, color: "#6B7280" }}>Lng: {longitude || "Not set"}</Text>
+            </View>
+
             {/* ── Verification Notice ── */}
             <View style={styles.verifyBanner}>
               <MaterialCommunityIcons
@@ -380,6 +538,30 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#6B7280",
     marginBottom: 12,
+  },
+
+  // Provider Custom Selection Buttons
+  providerBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  providerBtnActive: {
+    backgroundColor: "#0057B8",
+    borderColor: "#0057B8",
+  },
+  providerBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#4B5563",
+  },
+  providerBtnTextActive: {
+    color: "#FFFFFF",
   },
 
   // Facility type chips
