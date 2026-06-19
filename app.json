@@ -36,8 +36,15 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MediGo needs your location to find emergency help near you."
+        }
       ]
     ],
+    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
