@@ -32,6 +32,12 @@ export default function RegisterCitizen() {
   const [residence, setResidence] = useState("");
   const [password, setPassword] = useState("");
   const [userLocation, setUserLocation] = useState(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -1.286389,
+    longitude: 36.817223,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
 
   // --- UI-only state (not sent to backend) ---
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -105,6 +111,14 @@ export default function RegisterCitizen() {
       latitude: loc.coords.latitude,
       longitude: loc.coords.longitude,
     });
+
+    setMapRegion({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    
   } catch (error) {
     console.log(error);
   }
@@ -245,28 +259,123 @@ export default function RegisterCitizen() {
               keyboardType="phone-pad"
             />
 
-            <MapView
+            {/* ── Location Selection ── */}
+            <View
               style={{
-                height: 250,
                 borderRadius: 16,
+                overflow: "hidden",
                 marginBottom: 20,
-               }}
-              region={{
-                latitude: userLocation?.latitude || -1.286389,
-                longitude: userLocation?.longitude || 36.817223,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
+                position: "relative",
               }}
             >
-
-            {userLocation && (
-              <Marker
-                coordinate={userLocation}
-                title="You"
-                pinColor="blue"
+              <MapView
+                style={{
+                  height: 250,
+                }}
+                region={mapRegion}
+                onRegionChangeComplete={(region) =>
+                  setMapRegion(region)
+                }
               />
-            )}
-            </MapView>
+
+              {/* Fixed Crosshair */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: [
+                    { translateX: -15 },
+                    { translateY: -30 },
+                  ],
+                }}
+              >
+                <Ionicons
+                  name="location"
+                  size={30}
+                  color="#D62828"
+                />
+              </View>
+            </View>
+
+            {/* Location Buttons */}
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#0057B8",
+                padding: 14,
+                borderRadius: 12,
+                marginBottom: 10,
+              }}
+              onPress={getUserLocation}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  textAlign: "center",
+                  fontWeight: "600",
+                }}
+              >
+                Use My Current Location
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#2A9D8F",
+                padding: 14,
+                borderRadius: 12,
+                marginBottom: 12,
+              }}
+              onPress={() => {
+                setUserLocation({
+                  latitude: mapRegion.latitude,
+                  longitude: mapRegion.longitude,
+                });
+
+                Alert.alert(
+                  "Location Saved",
+                  `Lat: ${mapRegion.latitude.toFixed(6)}
+            Lng: ${mapRegion.longitude.toFixed(6)}`
+                );
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  textAlign: "center",
+                  fontWeight: "600",
+                }}
+              >
+                Confirm Location
+              </Text>
+            </TouchableOpacity>
+
+            {/* Selected Coordinates */}
+
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 20,
+              }}
+            >
+              <Text>
+                Latitude:{" "}
+                {userLocation
+                  ? userLocation.latitude.toFixed(6)
+                  : "Not selected"}
+              </Text>
+
+              <Text>
+                Longitude:{" "}
+                {userLocation
+                  ? userLocation.longitude.toFixed(6)
+                  : "Not selected"}
+              </Text>
+            </View>
 
             {/* ── Submit ── */}
             <TouchableOpacity

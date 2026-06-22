@@ -125,6 +125,18 @@ export default function RegisterMedic() {
       longitudeDelta: 0.01,
     });
 
+    const address =
+      await Location.reverseGeocodeAsync({
+        latitude,
+        longitude
+      });
+
+    if (address.length > 0)
+      setLocation(
+      `${address[0].city || ""}, ${
+        address[0].region || ""
+      }`
+      )
   };
 
   return (
@@ -248,7 +260,7 @@ export default function RegisterMedic() {
             </View>
 
             {/* Total Ambulances stepper */}
-            <View style={styles.stepperCard}>
+            {/* <View style={styles.stepperCard}>
               <Text style={styles.stepperLabel}>Total Ambulances</Text>
               <View style={styles.stepperControls}>
                 <TouchableOpacity
@@ -265,7 +277,7 @@ export default function RegisterMedic() {
                   <Ionicons name="add" size={20} color="#0057B8" />
                 </TouchableOpacity>
               </View>
-            </View>
+            </View> */}
 
             {/* ── Password ── */}
             <View style={styles.row}>
@@ -308,7 +320,7 @@ export default function RegisterMedic() {
             </View>
 
             {/* ── Get Location Section ── */}
-            {/* <TouchableOpacity
+            <TouchableOpacity
               onPress={getLocation}
               style={{
                 backgroundColor: "#0057B8",
@@ -319,9 +331,9 @@ export default function RegisterMedic() {
               }}
             >
               <Text style={{ color: "white", textAlign: "center", fontWeight: "600" }}>
-                Get Current Location
+                Use My Current Location
               </Text>
-            </TouchableOpacity> */}
+            </TouchableOpacity>
 
             {/* Embedded Map Layout */}
             <View
