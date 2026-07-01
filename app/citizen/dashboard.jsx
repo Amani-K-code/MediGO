@@ -12,6 +12,7 @@ import {
 import useLocation from "../hooks/useLocation";
 import { getDistanceKm } from "../utils/distance";
 import FirstAid from "./firstAid";
+import Profile from "./profile";
 
 const { width, height } = Dimensions.get("window");
 const RADIUS_KM = 50;
@@ -183,11 +184,7 @@ export default function CitizenDashboard() {
             <Text style={styles.screenHeader}>Emergency Hotlines</Text>
           </ScrollView>
         )}
-        {activeTab === "profile" && (
-          <ScrollView style={styles.scroller}>
-            <Text style={styles.screenHeader}>User Profile & Settings</Text>
-          </ScrollView>
-        )}
+        {activeTab === "profile" && <Profile />}
       </View>
 
       {/* ── TAB BAR (unchanged) ── */}
