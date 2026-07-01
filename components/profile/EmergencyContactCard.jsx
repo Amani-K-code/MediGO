@@ -24,7 +24,7 @@ const getInitials = (name) => {
     .slice(0, 2);
 };
 
-export default function EmergencyContactCard({ contacts, onSave, onError }) {
+export default function EmergencyContactCard({ contacts = [], onSave, onError }) {
   const [editing, setEditing] = useState(false);
   const [localContacts, setLocalContacts] = useState(() => withLocalIds(contacts));
   const [submitting, setSubmitting] = useState(false);

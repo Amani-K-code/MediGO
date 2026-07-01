@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import { Check, Plus, X } from "lucide-react-native";
 
-export default function MedicalTagsCard({ conditions, allergies, onSave, onError }) {
+export default function MedicalTagsCard({ conditions = [], allergies = [], onSave, onError }) {
   const [addingTag, setAddingTag] = useState(false);
   const [newTagText, setNewTagText] = useState("");
   const [newTagType, setNewTagType] = useState("condition"); // "condition" | "allergy"

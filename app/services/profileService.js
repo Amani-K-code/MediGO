@@ -16,12 +16,26 @@ export const profileDocRef = (uid) => {
     return doc(db, "users", uid, "profile", "data");
 };
 
+const emptyDefaults = () => ({
+    name: "",
+    location: "",
+    patientStatus: "Standby Patient",
+    dateOfBirth: "",
+    bloodType: "",
+    primaryPhysician: "",
+    emergencyContacts: [],
+    medicalConditions: [],
+    allergies: [],
+    standbyEnabled: false,
+    profilePhotoUrl: null,
+});
+
 export const getProfile = async (uid) => {
 
     const snap = await getDoc(profileDocRef(uid));
 
     if (snap.exists()) {
-        return snap.data();
+        return { ...emptyDefaults(), ...snap.data() };
     }
 
     const rootSnap = await getDoc(doc(db, "users", uid));
@@ -30,35 +44,16 @@ export const getProfile = async (uid) => {
         const rootData = rootSnap.data();
 
         return {
+            ...emptyDefaults(),
             name: rootData.fullName ?? "",
             location: rootData.residence ?? "",
-            patientStatus: "Standby Patient",
-            dateOfBirth: "",
-            bloodType: "",
-            primaryPhysician: "",
             emergencyContacts: rootData.nextOfKin
                 ? [{ name: rootData.nextOfKin, relationship: "", phone: rootData.nextOfKinPhone ?? "" }]
                 : [],
-            medicalConditions: [],
-            allergies: [],
-            standbyEnabled: false,
-            profilePhotoUrl: null,
         };
     }
 
-    return {
-        name: "",
-        location: "",
-        patientStatus: "Standby Patient",
-        dateOfBirth: "",
-        bloodType: "",
-        primaryPhysician: "",
-        emergencyContacts: [],
-        medicalConditions: [],
-        allergies: [],
-        standbyEnabled: false,
-        profilePhotoUrl: null,
-    };
+    return emptyDefaults();
 
 };
 
