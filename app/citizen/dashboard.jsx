@@ -9,6 +9,7 @@ import { Alert } from "react-native";
 import NotificationsSheet from "./notifications";
 import AmbulanceHotlines from "./ambulanceHotlines";
 import { triggerSMSFallback } from "../services/smsService";
+import FirstAid from "./firstAid";
 
 
 const { width, height } = Dimensions.get("window");
@@ -337,10 +338,10 @@ export default function CitizenDashboard() {
 
         {/* First Aid tab — heading only, no static data */}
         {activeTab === "first_aid" && (
-          <View style={styles.scroller}>
-            <Text style={styles.screenHeader}>First Aid Repository</Text>
-          </View>
-        )}
+        <View style={{ flex: 1, paddingTop: 50 }}> 
+          <FirstAid />
+        </View>
+      )}
 
         {/* Ambulances tab — Rendering Dynamic fleet data */}
         {activeTab === "ambulances" && (
