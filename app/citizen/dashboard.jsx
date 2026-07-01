@@ -11,6 +11,7 @@ import {
 
 import useLocation from "../hooks/useLocation";
 import { getDistanceKm } from "../utils/distance";
+import FirstAid from "./firstAid";
 
 const { width, height } = Dimensions.get("window");
 const RADIUS_KM = 50;
@@ -176,12 +177,7 @@ export default function CitizenDashboard() {
         )}
 
         {/* ── OTHER TABS (unchanged) ── */}
-        {activeTab === "first_aid" && (
-          <ScrollView style={styles.scroller} contentContainerStyle={{ paddingBottom: 40 }}>
-            <Text style={styles.screenHeader}>First Aid Repository</Text>
-            <Text style={styles.screenSub}>Offline storage active.</Text>
-          </ScrollView>
-        )}
+        {activeTab === "first_aid" && <FirstAid />}
         {activeTab === "ambulances" && (
           <ScrollView style={styles.scroller}>
             <Text style={styles.screenHeader}>Emergency Hotlines</Text>
