@@ -21,8 +21,10 @@ import {
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import ReportsScreen from "./reports";
 
 export default function AdminDashboard() {
+  const [currentTab, setCurrentTab] = useState("verifications"); // "verifications" or "reports"
   const [medics, setMedics] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -96,24 +98,67 @@ export default function AdminDashboard() {
           <View style={styles.headerInner}>
             <View>
               <Text style={styles.headerTitle}>Admin Panel</Text>
-              <Text style={styles.headerSub}>Facility Verifications</Text>
+              <Text style={styles.headerSub}>
+                {currentTab === "verifications" ? "Facility Verifications" : "System Reports & Logs"}
+              </Text>
             </View>
             <View style={styles.headerIconBox}>
-              <MaterialCommunityIcons name="shield-check" size={22} color="#FFFFFF" />
+              <MaterialCommunityIcons 
+                name={currentTab === "verifications" ? "shield-check" : "file-chart"} 
+                size={22} 
+                color="#FFFFFF" 
+              />
             </View>
           </View>
 
-          {/* Stats strip */}
-          <View style={styles.statsRow}>
-            <StatChip label="Pending" count={pending.length} color="#FCD34D" />
-            <StatChip label="Approved" count={approved.length} color="#4ADE80" />
-            <StatChip label="Rejected" count={rejected.length} color="#F87171" />
+          {/* Core View Switch Toggle Bar */}
+          <View style={styles.toggleBarContainer}>
+            <TouchableOpacity 
+              style={[styles.toggleBarBtn, currentTab === "verifications" && styles.toggleBarBtnActive]}
+              onPress={() => setCurrentTab("verifications")}
+              activeOpacity={0.9}
+            >
+              <MaterialCommunityIcons 
+                name="shield-check" 
+                size={16} 
+                color={currentTab === "verifications" ? "#0057B8" : "rgba(255,255,255,0.8)"} 
+              />
+              <Text style={[styles.toggleBarText, currentTab === "verifications" && styles.toggleBarTextActive]}>
+                Verifications
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.toggleBarBtn, currentTab === "reports" && styles.toggleBarBtnActive]}
+              onPress={() => setCurrentTab("reports")}
+              activeOpacity={0.9}
+            >
+              <MaterialCommunityIcons 
+                name="chart-box" 
+                size={16} 
+                color={currentTab === "reports" ? "#0057B8" : "rgba(255,255,255,0.8)"} 
+              />
+              <Text style={[styles.toggleBarText, currentTab === "reports" && styles.toggleBarTextActive]}>
+                Reports & Analytics
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Stats strip — Only renders when on verifications list view */}
+          {currentTab === "verifications" && (
+            <View style={styles.statsRow}>
+              <StatChip label="Pending" count={pending.length} color="#FCD34D" />
+              <StatChip label="Approved" count={approved.length} color="#4ADE80" />
+              <StatChip label="Rejected" count={rejected.length} color="#F87171" />
+            </View>
+          )}
         </SafeAreaView>
       </View>
 
-      {/* Body */}
-      {isLoading ? (
+      {/* Main Body Switch Handling Layout */}
+      {currentTab === "reports" ? (
+        <ReportsScreen />
+      ) : isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#0057B8" />
           <Text style={styles.loadingText}>Loading facilities...</Text>
@@ -312,13 +357,13 @@ function MedicCard({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F7F9FC" },
-  header: { backgroundColor: "#0057B8", paddingBottom: 20, paddingHorizontal: 20 },
+  header: { backgroundColor: "#0057B8", paddingBottom: 16, paddingHorizontal: 20 },
   headerInner: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingTop: 8,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   headerTitle: { fontSize: 24, fontWeight: "800", color: "#FFFFFF" },
   headerSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 },
@@ -329,6 +374,34 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  toggleBarContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
+    padding: 3,
+    marginBottom: 14,
+  },
+  toggleBarBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 11,
+    gap: 6,
+  },
+  toggleBarBtnActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  toggleBarText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#E2E8F0",
+  },
+  toggleBarTextActive: {
+    color: "#0057B8",
+    fontWeight: "700",
   },
   statsRow: {
     flexDirection: "row",

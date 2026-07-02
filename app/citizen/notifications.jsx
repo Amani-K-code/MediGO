@@ -91,8 +91,8 @@ export default function NotificationsSheet({ isOpen, onClose }) {
               </View>
               <Text style={styles.messageOfHope}>Hold on, professional care is rushing to your location. Keep calm.</Text>
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Paramedic: <Text style={styles.bold}>{incident.driverName}</Text></Text>
-                <Text style={styles.metaLabel}>Transponder: <Text style={styles.bold}>{incident.plateNumber}</Text></Text>
+                <Text style={styles.metaLabel}>Ambulance Driver Name: <Text style={styles.bold}>{incident.driverName}</Text></Text>
+                <Text style={styles.metaLabel}>Number Plate: <Text style={styles.bold}>{incident.plateNumber}</Text></Text>
               </View>
             </View>
           </View>
@@ -162,7 +162,7 @@ export default function NotificationsSheet({ isOpen, onClose }) {
           <View style={styles.sheetHandle} />
           
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Notifications🔔</Text>
+            <Text style={styles.sheetTitle}>Notifications</Text>
             <TouchableOpacity style={styles.btnClose} onPress={handleCloseSheet}>
               <X color="#64748B" size={18} />
             </TouchableOpacity>

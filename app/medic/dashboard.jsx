@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions } from "react-native";
-import { LayoutDashboard, Radio, ShieldCheck, Ambulance, User, AlertCircle, ChevronRight, Bell } from "lucide-react-native";
+import { LayoutDashboard, Radio, ShieldCheck, Ambulance, User, AlertCircle, ChevronRight, Bell, FileText } from "lucide-react-native";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import MapView, { Marker } from "react-native-maps";
 import RequestsScreen from "./requests";
+import HistoryScreen from "./history";
 
 const { height } = Dimensions.get("window");
 
@@ -174,9 +175,7 @@ export default function MedicDashboard() {
         )}
 
         {activeTab === "ambulances" && (
-          <View style={styles.scroller}>
-            <Text style={styles.screenHeader}>Fleet Trackers</Text>
-          </View>
+          <HistoryScreen />
         )}
 
         {activeTab === "profile" && (
@@ -205,9 +204,9 @@ export default function MedicDashboard() {
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab("ambulances")}>
             <View style={[styles.tabIconWrap, activeTab === "ambulances" && styles.tabIconWrapActive]}>
-              <Ambulance color={activeTab === "ambulances" ? "#fff" : "#9BB3C9"} size={20} />
+              <FileText color={activeTab === "ambulances" ? "#fff" : "#9BB3C9"} size={20} />
             </View>
-            <Text style={[styles.tabLabel, { color: activeTab === "ambulances" ? "#0057B8" : "#9BB3C9" }]}>Map</Text>
+            <Text style={[styles.tabLabel, { color: activeTab === "ambulances" ? "#0057B8" : "#9BB3C9" }]}>History</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab("profile")}>
