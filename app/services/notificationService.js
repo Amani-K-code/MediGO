@@ -45,6 +45,7 @@ export const sendReviewFeedbackScore = async (requestId, score, note) => {
         await addDoc(collection(db, "reviews"), {
             requestId,
             userId: getAuth().currentUser?.uid || null,
+            userName: getAuth().currentUser?.displayName || getAuth().currentUser?.email || "Anonymous",
             rating: score,
             feedback: note,
             createdAt: serverTimestamp(),

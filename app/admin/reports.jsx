@@ -82,8 +82,8 @@ export default function ReportsScreen() {
                   <Text style={styles.cardHeaderName}>{r.userName || "Emergency Call"}</Text>
                   <Text style={styles.cardStatusText}>{r.status?.toUpperCase()}</Text>
                 </View>
-                <Text style={styles.cardDetail}>📋 Intent Context: {r.type?.toUpperCase()}</Text>
-                <Text style={styles.cardDetail}>🚑 Assigned Crew Unit: {r.driverName || "Not Assigned"}</Text>
+                <Text style={styles.cardDetail}>Request Type: {r.type?.toUpperCase()}</Text>
+                <Text style={styles.cardDetail}>Ambulance Dispatched: {r.driverName || "Not Assigned"}</Text>
                 {r.paymentPending && (
                   <View style={styles.paymentFlag}>
                     <Text style={styles.paymentFlagText}>Awaiting Processing Fee Remittance</Text>
@@ -103,12 +103,19 @@ export default function ReportsScreen() {
               reviews.map((rv) => (
                 <View key={rv.id} style={styles.cardItem}>
                   <View style={styles.cardRow}>
-                    <Text style={styles.cardHeaderName}>Score Return Metrics</Text>
+                    <View>
+                      <Text style={styles.cardHeaderName}>
+                        {rv.userName || "Anonymous Citizen"}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: "#94A3B8", fontWeight: "500", marginTop: 1 }}>
+                        ID: {rv.userId ? rv.userId.slice(0, 10) + "..." : "—"}
+                      </Text>
+                    </View>
                     <Text style={styles.starDisplay}>{"⭐".repeat(rv.rating || 5)}</Text>
                   </View>
                   <Text style={styles.reviewComment}>{`"${rv.feedback || "System task finalized cleanly without narrative commentary details."}"`}</Text>
                 </View>
-              ))
+                              ))
             )}
           </View>
         )}
