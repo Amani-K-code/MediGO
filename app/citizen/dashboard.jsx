@@ -10,6 +10,7 @@ import NotificationsSheet from "./notifications";
 import AmbulanceHotlines from "./ambulanceHotlines";
 import { triggerSMSFallback } from "../services/smsService";
 import FirstAid from "./firstAid";
+import Profile from "./profile";
 
 
 const { width, height } = Dimensions.get("window");
@@ -352,9 +353,7 @@ export default function CitizenDashboard() {
 
         {/* Profile tab — heading only, no static data */}
         {activeTab === "profile" && (
-          <View style={styles.scroller}>
-            <Text style={styles.screenHeader}>User Profile & Settings</Text>
-          </View>
+          <Profile />
         )}
       </View>
 
