@@ -1,4 +1,4 @@
-import { loginUser } from "./services/authService";
+import { loginUser } from "../services/authService";
 import {
   View,
   Text,
@@ -118,7 +118,7 @@ export default function LoginScreen() {
             <View style={styles.headerInner}>
               <Animated.View style={logoStyle}>
                 <Image
-                  source={require("../assets/images/MediGo_favicon.png")}
+                  source={require("../../assets/images/MediGo_favicon.png")}
                   style={styles.logo}
                 />
               </Animated.View>
@@ -196,7 +196,7 @@ export default function LoginScreen() {
 
             {/* Sign up link */}
             <View style={styles.signupRow}>
-              <Text style={styles.signupPrompt}>Don't have an account? </Text>
+              <Text style={styles.signupPrompt}>Don&apos;t have an account? </Text>
               <TouchableOpacity onPress={() => router.push("/")}>
                 <Text style={styles.signupLink}>Sign Up</Text>
               </TouchableOpacity>

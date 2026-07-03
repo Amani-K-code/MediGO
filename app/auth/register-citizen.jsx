@@ -1,22 +1,24 @@
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  StatusBar,
-  ActivityIndicator,
-  Switch,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { registerCitizen } from "./services/authService";
+import { useRouter } from "expo-router";
+import { useState,useEffect } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { registerCitizen } from "../services/authService";
+import * as Location from "expo-location";
+import MapView from "react-native-maps";
 
 export default function RegisterCitizen() {
   const router = useRouter();
@@ -28,6 +30,15 @@ export default function RegisterCitizen() {
   const [phone, setPhone] = useState("");
   const [residence, setResidence] = useState("");
   const [password, setPassword] = useState("");
+  const [userLocation, setUserLocation] = useState(null);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -1.286389,
+    longitude: 36.817223,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+
+  // --- UI-only state (not sent to backend) ---
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -41,6 +52,13 @@ export default function RegisterCitizen() {
   const validateStep1 = () => {
     if (!fullName || !email || !phone || !residence) {
       Alert.alert("Missing Fields", "Please fill in all required fields.");
+      return false;
+    }
+    if (!userLocation) {
+      Alert.alert(
+        "Location Required",
+        "Please share or confirm your location before continuing."
+      );
       return false;
     }
     return true;
@@ -86,10 +104,12 @@ export default function RegisterCitizen() {
         nextOfKin.trim(),
         nextOfKinPhone.trim(),
         residence.trim(),
-        password
+        userLocation?.latitude || null,
+        userLocation?.longitude || null,
+        password,
       );
       Alert.alert("Account Created!", "Welcome to MediGo.", [
-        { text: "Log In", onPress: () => router.replace("/login") },
+        { text: "Log In", onPress: () => router.replace("/auth/login") },
       ]);
     } catch (error) {
       const msg =
@@ -100,7 +120,44 @@ export default function RegisterCitizen() {
     } finally {
       setIsLoading(false);
     }
+  }
+  const getUserLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Location permission is required to access your current location."
+      );
+      return;
+    }
+
+    try {
+    const loc = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest});
+    
+    setUserLocation({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+    });
+
+    setMapRegion({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    
+  } catch (error) {
+    console.log(error);
+  }
+
   };
+  useEffect(() => {
+    getUserLocation();
+  }, []);
+
+  {/*-- debugging */}
+  console.log("User Location:", userLocation);
 
   const stepTitles = ["Personal Details", "Security", "Emergency & Medical"];
   const stepSubtitles = [
@@ -176,6 +233,84 @@ export default function RegisterCitizen() {
                   onChangeText={setResidence}
                   icon="location-outline"
                 />
+                {/* ── Location ── */}
+                <Text style={styles.fieldLabel}>Your Location</Text>
+                <View
+                  style={{
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    marginBottom: 12,
+                    position: "relative",
+                  }}
+                >
+                  <MapView
+                    style={{ height: 200 }}
+                    region={mapRegion}
+                    onRegionChangeComplete={(region) => setMapRegion(region)}
+                  />
+
+                  {/* Fixed Crosshair */}
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: [{ translateX: -15 }, { translateY: -30 }],
+                    }}
+                  >
+                    <Ionicons name="location" size={30} color="#D62828" />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#0057B8",
+                    padding: 14,
+                    borderRadius: 12,
+                    marginBottom: 10,
+                  }}
+                  onPress={getUserLocation}
+                >
+                  <Text style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}>
+                    Use My Current Location
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#2A9D8F",
+                    padding: 14,
+                    borderRadius: 12,
+                    marginBottom: 12,
+                  }}
+                  onPress={() =>
+                    setUserLocation({
+                      latitude: mapRegion.latitude,
+                      longitude: mapRegion.longitude,
+                    })
+                  }
+                >
+                  <Text style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}>
+                    Confirm Location
+                  </Text>
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text>
+                    Latitude: {userLocation ? userLocation.latitude.toFixed(6) : "Not selected"}
+                  </Text>
+                  <Text>
+                    Longitude: {userLocation ? userLocation.longitude.toFixed(6) : "Not selected"}
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -364,6 +499,8 @@ function InputField({
     </View>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F0F2FF" },

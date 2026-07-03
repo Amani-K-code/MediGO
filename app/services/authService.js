@@ -19,6 +19,8 @@ export const registerCitizen = async (
     nextOfKin,
     nextOfKinPhone,
     residence,
+    latitude,
+    longitude,
     password
 ) => {
 
@@ -40,6 +42,8 @@ export const registerCitizen = async (
             nextOfKin,
             nextOfKinPhone,
             residence,
+            latitude,
+            longitude,
             role: "citizen",
             createdAt: new Date()
         }
@@ -49,10 +53,13 @@ export const registerCitizen = async (
 
 export const registerMedic = async (
     establishmentName,
+    providerType,
     email,  
     phone,
     licenseNumber,
     location,
+    latitude,
+    longitude,
     password
 ) => {
 
@@ -73,6 +80,9 @@ export const registerMedic = async (
             phone,
             licenseNumber,
             location,
+            latitude: latitude,
+            longitude: longitude,
+            providerType,
 
             role: "medic",
             status: "pending",
