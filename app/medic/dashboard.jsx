@@ -6,6 +6,7 @@ import { db } from "../../firebase/firebaseConfig";
 import MapView, { Marker } from "react-native-maps";
 import RequestsScreen from "./requests";
 import HistoryScreen from "./history";
+import MedicProfile from "./medicProfile";
 
 const { height } = Dimensions.get("window");
 
@@ -179,9 +180,7 @@ export default function MedicDashboard() {
         )}
 
         {activeTab === "profile" && (
-          <View style={styles.scroller}>
-            <Text style={styles.screenHeader}>Hospital Profile Terminal</Text>
-          </View>
+          <MedicProfile />
         )}
       </View>
 
