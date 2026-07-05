@@ -12,9 +12,8 @@ import {
   Platform,
   ScrollView,
   Image,
-  Animated,
 } from "react-native";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,40 +26,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Bounce animation
-  const bounceAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.spring(bounceAnim, {
-          toValue: 1,
-          friction: 4,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.spring(bounceAnim, {
-          toValue: 0,
-          friction: 4,
-          tension: 100,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  const logoStyle = {
-    transform: [
-      {
-        translateY: bounceAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [-60, 0],
-        }),
-      },
-    ],
-    opacity: bounceAnim,
-  };
 
   const handleLogin = async () => {
     try {
@@ -116,12 +81,10 @@ export default function LoginScreen() {
 
             {/* Header */}
             <View style={styles.headerInner}>
-              <Animated.View style={logoStyle}>
-                <Image
-                  source={require("../../assets/images/MediGo_favicon.png")}
-                  style={styles.logo}
-                />
-              </Animated.View>
+              <Image
+                source={require("../../assets/images/MediGo_favicon.png")}
+                style={styles.logo}
+              />
               <Text style={styles.headerTitle}>Welcome Back</Text>
               <Text style={styles.headerSubtitle}>Log in to manage your care</Text>
             </View>
