@@ -5,6 +5,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import MapView, { Marker } from "react-native-maps";
 import RequestsScreen from "./requests";
+import Profile from "./profile";
 
 const { height } = Dimensions.get("window");
 
@@ -179,11 +180,7 @@ export default function MedicDashboard() {
           </View>
         )}
 
-        {activeTab === "profile" && (
-          <View style={styles.scroller}>
-            <Text style={styles.screenHeader}>Hospital Profile Terminal</Text>
-          </View>
-        )}
+        {activeTab === "profile" && <Profile />}
       </View>
 
       {/* Glossy Tab Dock */}

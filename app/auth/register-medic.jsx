@@ -90,6 +90,7 @@ export default function RegisterMedic() {
         latitude,
         longitude,
         password,
+        totalAmbulances,
       );
       Alert.alert(
         "Facility Registered!",
@@ -127,8 +128,8 @@ export default function RegisterMedic() {
 
     const address =
       await Location.reverseGeocodeAsync({
-        latitude,
-        longitude
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude
       });
 
     if (address.length > 0)
@@ -260,7 +261,7 @@ export default function RegisterMedic() {
             </View>
 
             {/* Total Ambulances stepper */}
-            {/* <View style={styles.stepperCard}>
+            <View style={styles.stepperCard}>
               <Text style={styles.stepperLabel}>Total Ambulances</Text>
               <View style={styles.stepperControls}>
                 <TouchableOpacity
@@ -277,7 +278,7 @@ export default function RegisterMedic() {
                   <Ionicons name="add" size={20} color="#0057B8" />
                 </TouchableOpacity>
               </View>
-            </View> */}
+            </View>
 
             {/* ── Password ── */}
             <View style={styles.row}>

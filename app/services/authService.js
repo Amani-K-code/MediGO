@@ -60,7 +60,8 @@ export const registerMedic = async (
     location,
     latitude,
     longitude,
-    password
+    password,
+    totalAmbulances = 0
 ) => {
 
     const userCredential =
@@ -86,6 +87,12 @@ export const registerMedic = async (
 
             role: "medic",
             status: "pending",
+
+            totalAmbulances,
+            availableAmbulances: totalAmbulances,
+            operatingHours: "",
+            servicesOffered: [],
+            acceptingPatients: false,
 
             createdAt: new Date()
          }
