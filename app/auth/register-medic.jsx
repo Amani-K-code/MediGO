@@ -179,6 +179,11 @@ export default function RegisterMedic() {
                   providerType === "facility" && styles.providerBtnActive
                 ]}
               >
+                <MaterialCommunityIcons
+                  name="hospital-building"
+                  size={30}
+                  color={providerType === "facility" ? "#FFFFFF" : "#4B5563"}
+                />
                 <Text style={[
                   styles.providerBtnText,
                   providerType === "facility" && styles.providerBtnTextActive
@@ -194,6 +199,11 @@ export default function RegisterMedic() {
                   providerType === "ambulance" && styles.providerBtnActive
                 ]}
               >
+                <MaterialCommunityIcons
+                  name="ambulance"
+                  size={30}
+                  color={providerType === "ambulance" ? "#FFFFFF" : "#4B5563"}
+                />
                 <Text style={[
                   styles.providerBtnText,
                   providerType === "ambulance" && styles.providerBtnTextActive
@@ -211,29 +221,27 @@ export default function RegisterMedic() {
               autoCapitalize="words"
             />
 
-            {/* Email + Phone side by side */}
-            <View style={styles.row}>
-              <View style={[styles.inputWrapper, styles.halfInput]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-              <View style={[styles.inputWrapper, styles.halfInput]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone"
-                  placeholderTextColor="#9CA3AF"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
+            {/* Email + Phone, one per line */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Phone"
+                placeholderTextColor="#9CA3AF"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
             </View>
 
             {/* License Number + County side by side */}
@@ -556,7 +564,9 @@ const styles = StyleSheet.create({
   // Provider Custom Selection Buttons
   providerBtn: {
     flex: 1,
-    height: 50,
+    height: 72,
+    flexDirection: "column",
+    gap: 6,
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -569,7 +579,7 @@ const styles = StyleSheet.create({
     borderColor: "#0057B8",
   },
   providerBtnText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "600",
     color: "#4B5563",
   },
