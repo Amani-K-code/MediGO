@@ -1,11 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from "react-native";
-import { Ambulance, Star, CreditCard, CheckCircle, Clock, Heart, X } from "lucide-react-native";
+import { Ambulance, Star, CreditCard, CheckCircle, Clock, Heart, X, Trash2 } from "lucide-react-native";
 import { listenToLiveStreamUpdates, sendReviewFeedbackScore } from "../services/notificationService";
 
 export default function NotificationsSheet({ isOpen, onClose }) {
   const [activeAlerts, setActiveAlerts] = useState([]);
-  const [readAlertIds, setReadAlertIds] = useState([]);
+  const [dismissedIds, setDismissedIds] = useState([]);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
 
@@ -21,14 +22,30 @@ export default function NotificationsSheet({ isOpen, onClose }) {
     };
   }, [isOpen]);
 
-  // Intercept modal dismissal to flag current alerts as "read"
+  // Only truly "actionable" cards (payment pending, not yet reviewed) are protected from auto-clear.
+  // Everything else (dispatched-in-transit, already-reviewed) is safe to permanently clear once seen.
+  const isActionRequired = (incident) => {
+    const needsPayment = incident.status === "completed" || incident.status === "pending_payment" || incident.paymentPending === true;
+    const alreadyReviewed = incident.rating != null;
+    return needsPayment && !alreadyReviewed;
+  };
+
+  // On close: permanently dismiss everything currently visible that doesn't still need action
   const handleCloseSheet = () => {
-    const currentIds = activeAlerts.map((alert) => alert.id);
-    setReadAlertIds((prevRead) => {
-      const merged = new Set([...prevRead, ...currentIds]);
-      return Array.from(merged);
-    });
+    const clearableIds = activeAlerts
+      .filter((alert) => !isActionRequired(alert))
+      .map((alert) => alert.id);
+
+    if (clearableIds.length > 0) {
+      setDismissedIds((prev) => Array.from(new Set([...prev, ...clearableIds])));
+    }
     onClose();
+  };
+
+  // Explicit "Clear All" — dismisses everything currently visible, no exceptions
+  const handleClearAll = () => {
+    const allIds = activeAlerts.map((alert) => alert.id);
+    setDismissedIds((prev) => Array.from(new Set([...prev, ...allIds])));
   };
 
   const handleReviewSubmission = async (requestId) => {
@@ -37,17 +54,18 @@ export default function NotificationsSheet({ isOpen, onClose }) {
       Alert.alert("Thank you", "Your feedback is highly appreciated.");
       setRating(0);
       setReviewText("");
+      // Once reviewed, this card no longer needs action — safe to clear immediately
+      setDismissedIds((prev) => Array.from(new Set([...prev, requestId])));
     } else {
       Alert.alert("Error", "Failed to submit review. Please contact support.");
     }
   };
 
-  // Separate alerts locally for immediate visual categorization
-  const unreadAlerts = activeAlerts.filter((alert) => !readAlertIds.includes(alert.id));
-  const readAlerts = activeAlerts.filter((alert) => readAlertIds.includes(alert.id));
+  // Filter out anything already dismissed — this is what actually removes clutter
+  const visibleAlerts = activeAlerts.filter((alert) => !dismissedIds.includes(alert.id));
 
-  const renderAlertCard = (incident, isUnread) => (
-    <View key={incident.id} style={[styles.cardContainer, !isUnread && styles.readCardSubtle]}>
+  const renderAlertCard = (incident) => (
+    <View key={incident.id} style={styles.cardContainer}>
       {/* CASE C: Already reviewed — show confirmation instead of form */}
       {incident.rating != null && incident.status === "completed" && (
         <View style={styles.reviewedCard}>
@@ -56,14 +74,7 @@ export default function NotificationsSheet({ isOpen, onClose }) {
               <CheckCircle color="#2E654C" size={20} />
             </View>
             <View style={styles.textBlock}>
-              <View style={styles.headerBadgeRow}>
-                <Text style={styles.alertHeading}>Review Submitted</Text>
-                {!isUnread && (
-                  <View style={styles.readBadge}>
-                    <Text style={styles.readBadgeText}>Read</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={styles.alertHeading}>Review Submitted</Text>
               <Text style={styles.messageOfHope}>Thank you for your feedback. Your rating ({incident.rating}/5) has been recorded.</Text>
               {incident.feedback ? (
                 <Text style={styles.metaLabel}>Your comment: <Text style={styles.bold}>{incident.feedback}</Text></Text>
@@ -81,14 +92,7 @@ export default function NotificationsSheet({ isOpen, onClose }) {
               <Ambulance color="#2E654C" size={20} />
             </View>
             <View style={styles.textBlock}>
-              <View style={styles.headerBadgeRow}>
-                <Text style={styles.alertHeading}>Fleet En-Route</Text>
-                {!isUnread && (
-                  <View style={styles.readBadge}>
-                    <Text style={styles.readBadgeText}>Read</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={styles.alertHeading}>Fleet En-Route</Text>
               <Text style={styles.messageOfHope}>Hold on, professional care is rushing to your location. Keep calm.</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>Ambulance Driver Name: <Text style={styles.bold}>{incident.driverName}</Text></Text>
@@ -104,52 +108,45 @@ export default function NotificationsSheet({ isOpen, onClose }) {
       )}
 
       {/* CASE B: Completed / Pending Payment Action (not yet reviewed) */}
-    {!incident.rating && (incident.status === "completed" || incident.status === "pending_payment" || incident.paymentPending === true) && (
-    <View style={styles.billingCard}>
-        <View style={styles.row}>
-        <View style={styles.iconCircleRed}>
-            <CreditCard color="#D62828" size={20} />
-        </View>
-        <View style={styles.textBlock}>
-            <View style={styles.headerBadgeRow}>
-            <Text style={styles.billingHeading}>Payment Pending</Text>
-            {!isUnread && (
-                <View style={styles.readBadge}>
-                <Text style={styles.readBadgeText}>Read</Text>
-                </View>
-            )}
+      {!incident.rating && (incident.status === "completed" || incident.status === "pending_payment" || incident.paymentPending === true) && (
+        <View style={styles.billingCard}>
+          <View style={styles.row}>
+            <View style={styles.iconCircleRed}>
+              <CreditCard color="#D62828" size={20} />
             </View>
-            <Text style={styles.billingSub}>
-            Please settle out-of-pocket metrics or clear billing invoices to:{"\n"}
-            <Text style={styles.bold}>{incident.driverName}</Text>
-            </Text>
-        </View>
-        </View>
+            <View style={styles.textBlock}>
+              <Text style={styles.billingHeading}>Payment Pending</Text>
+              <Text style={styles.billingSub}>
+                Please settle out-of-pocket metrics or clear billing invoices to:{"\n"}
+                <Text style={styles.bold}>{incident.driverName}</Text>
+              </Text>
+            </View>
+          </View>
 
-    {/* Rating Component */}
-    <View style={styles.ratingBox}>
-      <Text style={styles.ratingTitle}>Rate Medical Response Squad</Text>
-      <View style={styles.starRow}>
-        {[1, 2, 3, 4, 5].map((num) => (
-          <TouchableOpacity key={num} onPress={() => setRating(num)}>
-            <Star size={24} color={num <= rating ? "#FF9F1C" : "#E2E8F0"} fill={num <= rating ? "#FF9F1C" : "transparent"} />
-          </TouchableOpacity>
-        ))}
-      </View>
-      <TextInput 
-        style={styles.textInput}
-        placeholder="Provide care quality details..."
-        placeholderTextColor="#94A3B8"
-        value={reviewText}
-        onChangeText={setReviewText}
-      />
-      <TouchableOpacity style={styles.btnSubmit} onPress={() => handleReviewSubmission(incident.id)}>
-        <CheckCircle size={14} color="#fff" />
-        <Text style={styles.btnText}>Submit Care Report & Close</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
+          {/* Rating Component */}
+          <View style={styles.ratingBox}>
+            <Text style={styles.ratingTitle}>Rate Medical Response Squad</Text>
+            <View style={styles.starRow}>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <TouchableOpacity key={num} onPress={() => setRating(num)}>
+                  <Star size={24} color={num <= rating ? "#FF9F1C" : "#E2E8F0"} fill={num <= rating ? "#FF9F1C" : "transparent"} />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Provide care quality details..."
+              placeholderTextColor="#94A3B8"
+              value={reviewText}
+              onChangeText={setReviewText}
+            />
+            <TouchableOpacity style={styles.btnSubmit} onPress={() => handleReviewSubmission(incident.id)}>
+              <CheckCircle size={14} color="#fff" />
+              <Text style={styles.btnText}>Submit Care Report & Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 
@@ -157,40 +154,34 @@ export default function NotificationsSheet({ isOpen, onClose }) {
     <Modal visible={isOpen} animationType="slide" transparent={true} onRequestClose={handleCloseSheet}>
       <View style={styles.modalBackdrop}>
         <TouchableOpacity style={styles.dismissDismissLayer} onPress={handleCloseSheet} activeOpacity={1} />
-        
+
         <View style={styles.sheetContent}>
           <View style={styles.sheetHandle} />
-          
+
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Notifications</Text>
-            <TouchableOpacity style={styles.btnClose} onPress={handleCloseSheet}>
-              <X color="#64748B" size={18} />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              {visibleAlerts.length > 0 && (
+                <TouchableOpacity style={styles.btnClearAll} onPress={handleClearAll}>
+                  <Trash2 color="#64748B" size={14} />
+                  <Text style={styles.btnClearAllText}>Clear All</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.btnClose} onPress={handleCloseSheet}>
+                <X color="#64748B" size={18} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollList}>
-            {activeAlerts.length === 0 ? (
+            {visibleAlerts.length === 0 ? (
               <View style={styles.emptyState}>
                 <Heart size={36} color="#9BB3C9" strokeWidth={1.5} />
                 <Text style={styles.emptyText}>All operations are nominal. No active dispatch broadcasts found.</Text>
               </View>
             ) : (
               <View>
-                {/* Unread Section */}
-                {unreadAlerts.length > 0 && (
-                  <View>
-                    <Text style={styles.sectionDividerText}>New Updates</Text>
-                    {unreadAlerts.map((incident) => renderAlertCard(incident, true))}
-                  </View>
-                )}
-
-                {/* Read Section */}
-                {readAlerts.length > 0 && (
-                  <View style={styles.readSectionSpacing}>
-                    <Text style={styles.sectionDividerText}>Earlier Reviewed</Text>
-                    {readAlerts.map((incident) => renderAlertCard(incident, false))}
-                  </View>
-                )}
+                {visibleAlerts.map((incident) => renderAlertCard(incident))}
               </View>
             )}
           </ScrollView>
@@ -207,6 +198,9 @@ const styles = StyleSheet.create({
   sheetHandle: { width: 36, height: 5, backgroundColor: "#E2E8F0", borderRadius: 3, alignSelf: "center", marginBottom: 14 },
   sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   sheetTitle: { fontSize: 18, fontWeight: "800", color: "#1D2D44" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  btnClearAll: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#F1F5F9", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  btnClearAllText: { fontSize: 11, fontWeight: "700", color: "#64748B" },
   btnClose: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center" },
   scrollList: { paddingBottom: 40 },
   emptyState: { paddingVertical: 60, alignItems: "center", gap: 12 },
@@ -216,8 +210,7 @@ const styles = StyleSheet.create({
   textBlock: { flex: 1, gap: 3 },
   bold: { fontWeight: "700" },
   metaRow: { marginTop: 6, gap: 2 },
-  
-  // New Sage Green Palette
+
   dispatchCard: { backgroundColor: "#F4F9F6", borderWidth: 1, borderColor: "#D2E6DE", borderRadius: 20, padding: 16 },
   reviewedCard: { backgroundColor: "#F0F9F4", borderWidth: 1, borderColor: "#B8DCC9", borderRadius: 20, padding: 16 },
   iconCircleCalm: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E3EFEA", alignItems: "center", justifyContent: "center" },
@@ -227,7 +220,6 @@ const styles = StyleSheet.create({
   etaIndicator: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12, backgroundColor: "#E3EFEA", padding: 10, borderRadius: 10 },
   etaText: { fontSize: 12, fontWeight: "700", color: "#2E654C" },
 
-  // Billing & Reviews
   iconCircleRed: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" },
   billingCard: { backgroundColor: "#FFF5F5", borderWidth: 1, borderColor: "#FEE2E2", borderRadius: 20, padding: 16 },
   billingHeading: { fontSize: 15, fontWeight: "800", color: "#991B1B" },
@@ -238,12 +230,4 @@ const styles = StyleSheet.create({
   textInput: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#FCA5A5", borderRadius: 10, padding: 10, fontSize: 13, color: "#1D2D44", marginBottom: 12 },
   btnSubmit: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#D62828", paddingVertical: 12, borderRadius: 12 },
   btnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-
-  // Categorization & Split Views
-  sectionDividerText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", color: "#94A3B8", letterSpacing: 0.8, marginBottom: 8, marginTop: 4 },
-  readCardSubtle: { opacity: 0.6 },
-  readSectionSpacing: { marginTop: 12 },
-  headerBadgeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  readBadge: { backgroundColor: "#E2E8F0", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  readBadgeText: { fontSize: 9, fontWeight: "700", color: "#64748B" }
 });

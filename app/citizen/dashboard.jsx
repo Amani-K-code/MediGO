@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet, TextInput } from "react-native";
-import { Home, HeartPulse, Ambulance, User, Settings, ShieldAlert, MapPin, Search, Navigation, Bell, ChevronRight, Clock, MessageSquare, X } from "lucide-react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "expo-router";
+import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet, TextInput, ActivityIndicator } from "react-native";
+import { Home, LogOut, HeartPulse, Ambulance, User, Settings, ShieldAlert, MapPin, Search, Navigation, Bell, ChevronRight, Clock, MessageSquare, X } from "lucide-react-native";
 import MapView, { Marker, Callout } from "react-native-maps";
-import { addDoc,serverTimestamp,collection, query, where, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
+import { addDoc, serverTimestamp, collection, query, where, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
-import { getAuth } from "firebase/auth";
-import { Alert } from "react-native";
+import { getAuth, signOut } from "firebase/auth";
+import { BackHandler, Alert } from "react-native";
 import NotificationsSheet from "./notifications";
 import AmbulanceHotlines from "./ambulanceHotlines";
 import { triggerSMSFallback } from "../services/smsService";
 import FirstAid from "./firstAid";
 import Profile from "./profile";
-
+import * as Location from "expo-location";
 
 const { width, height } = Dimensions.get("window");
 
@@ -22,7 +23,17 @@ export default function CitizenDashboard() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  
+
+  // Location-choice modal state
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [pendingRequestType, setPendingRequestType] = useState(null); // "emergency" | "standby"
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  // Auto-popup dispatch toast state
+  const [dispatchToast, setDispatchToast] = useState(null); // { id, driverName, plateNumber, estimatedArrivalMinutes }
+  const seenDispatchIds = useRef(new Set());
+
+  const router = useRouter();
 
   const fetchMedics = async () => {
     const q = query(
@@ -55,86 +66,134 @@ export default function CitizenDashboard() {
     return haystack.includes(searchQuery.toLowerCase());
   });
 
-  const sendEmergencyRequest = async () => {
-    try{
+  // ── SOS request — kept as its own dedicated function ──
+  const sendEmergencyRequest = async (latitude, longitude) => {
+    try {
       const user = getAuth().currentUser;
-
       const userDoc = await getDoc(doc(db, "users", user.uid));
-
       const userData = userDoc.data();
 
       await addDoc(collection(db, "requests"), {
         userId: user.uid,
         userName: userData.fullName,
         type: "emergency",
-        latitude: -1.286389, // Placeholder for actual user location
-        longitude: 36.817223, // Placeholder for actual user location
+        latitude,
+        longitude,
         status: "pending",
         createdAt: serverTimestamp(),
       });
 
       Alert.alert("Emergency Request Sent", "Help is on the way!");
-
     } catch (error) {
       console.error("Error sending emergency request: ", error);
       Alert.alert("Failed to send request", "Please try again.");
     }
   };
 
-  const sendStandbyRequest = async () => {
+  // ── Standby request — kept as its own dedicated function ──
+  const sendStandbyRequest = async (latitude, longitude) => {
     try {
-
       const user = getAuth().currentUser;
-
       const userDoc = await getDoc(doc(db, "users", user.uid));
-
       const userData = userDoc.data();
 
       await addDoc(collection(db, "requests"), {
         userId: user.uid,
         userName: userData.fullName,
         type: "standby",
-        latitude: -1.286389, // Placeholder for actual user location
-        longitude: 36.817223, // Placeholder for actual user location
+        latitude,
+        longitude,
         status: "pending",
         createdAt: serverTimestamp(),
       });
 
       Alert.alert("Standby Request Sent", "Medical team will be on standby.");
-
     } catch (error) {
       console.error("Error sending standby request: ", error);
       Alert.alert("Failed to send request", "Please try again.");
     }
   };
 
-  const [myRequests, setMyRequests] = useState([]);
+  // Opens the location-choice sheet; remembers whether SOS or Standby triggered it
+  const openLocationChoice = (type) => {
+    setPendingRequestType(type);
+    setLocationModalVisible(true);
+  };
+
+  // Routes to the correct dedicated function once coordinates are ready
+  const dispatchRequest = (latitude, longitude) => {
+    if (pendingRequestType === "emergency") {
+      sendEmergencyRequest(latitude, longitude);
+    } else if (pendingRequestType === "standby") {
+      sendStandbyRequest(latitude, longitude);
+    }
+  };
+
+  // Option A: fetch live GPS location
+  const handleUseCurrentLocation = async () => {
+    setIsFetchingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Location permission is needed to use your current location.");
+        setIsFetchingLocation(false);
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
+      const { latitude, longitude } = loc.coords;
+
+      setIsFetchingLocation(false);
+      setLocationModalVisible(false);
+
+      Alert.alert(
+        "Location Found",
+        `Lat: ${latitude.toFixed(6)}\nLng: ${longitude.toFixed(6)}`,
+        [{ text: "Send Request", onPress: () => dispatchRequest(latitude, longitude) }]
+      );
+    } catch (error) {
+      console.error("Error getting current location: ", error);
+      setIsFetchingLocation(false);
+      Alert.alert("Location Error", "Couldn't get your current location. Please try again.");
+    }
+  };
+
+  // Option B: use the location saved during registration
+  const handleUseRegisteredLocation = async () => {
+    setIsFetchingLocation(true);
+    try {
+      const user = getAuth().currentUser;
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const userData = userDoc.data();
+
+      if (!userData?.latitude || !userData?.longitude) {
+        setIsFetchingLocation(false);
+        Alert.alert("No Registered Location", "We couldn't find a saved location on your profile.");
+        return;
+      }
+
+      const { latitude, longitude } = userData;
+
+      setIsFetchingLocation(false);
+      setLocationModalVisible(false);
+
+      Alert.alert(
+        "Registered Location Found",
+        `Lat: ${Number(latitude).toFixed(6)}\nLng: ${Number(longitude).toFixed(6)}`,
+        [{ text: "Send Request", onPress: () => dispatchRequest(latitude, longitude) }]
+      );
+    } catch (error) {
+      console.error("Error reading registered location: ", error);
+      setIsFetchingLocation(false);
+      Alert.alert("Error", "Couldn't load your registered location. Please try again.");
+    }
+  };
+
+  // Single consolidated listener: drives the unread badge AND the auto-popup dispatch toast.
+  // (Replaces the old unused `myRequests` listener + this one — no more duplicate subscriptions.)
   useEffect(() => {
     const user = getAuth().currentUser;
-
-    if(!user) return;
-
-    const q = query(
-      collection(db, "requests"),
-      where("status", "==", "pending"),
-      where("userId", "==", user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const requestsData = [];
-      querySnapshot.forEach((doc) => {
-        requestsData.push({ id: doc.id, ...doc.data() });
-      });
-      setMyRequests(requestsData);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Listen for active stream events to update the notifications bay
-  useEffect(() => {
-    const user = getAuth().currentUser;
-    if(!user) return;
+    if (!user) return;
 
     const q = query(
       collection(db, "requests"),
@@ -143,10 +202,24 @@ export default function CitizenDashboard() {
 
     const unsubscribe = onSnapshot(q, (snapShot) => {
       let unread = 0;
-      snapShot.forEach((doc) => {
-        const data = doc.data();
-        if(data.status === "dispatched" || (data.status === "completed" && data.paymentPending === true)) {
+      snapShot.forEach((docSnap) => {
+        const data = docSnap.data();
+
+        if (data.status === "dispatched" || (data.status === "completed" && data.paymentPending === true)) {
           unread++;
+        }
+
+        // Auto-popup the moment a request becomes dispatched — no bell tap required
+        const dispatchedSeconds = data.dispatchedAt?.seconds || 0;
+        const isRecentDispatch = dispatchedSeconds > 0 && (Date.now() / 1000 - dispatchedSeconds) < 60; // within last 60 seconds
+        if (data.status === "dispatched" && isRecentDispatch && !seenDispatchIds.current.has(docSnap.id)) {
+          seenDispatchIds.current.add(docSnap.id);
+          setDispatchToast({
+            id: docSnap.id,
+            driverName: data.driverName || "Paramedic Team",
+            plateNumber: data.plateNumber || "N/A",
+            estimatedArrivalMinutes: data.estimatedArrivalMinutes,
+          });
         }
       });
       setUnreadCount(unread);
@@ -155,6 +228,38 @@ export default function CitizenDashboard() {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // Auto-dismiss the dispatch toast after 5 seconds
+  useEffect(() => {
+    if (dispatchToast) {
+      const timer = setTimeout(() => setDispatchToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [dispatchToast]);
+
+  const confirmLogout = () => {
+    Alert.alert(
+      "Confirm Logout", "Are you sure you want to logout?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            await signOut(getAuth());
+            router.replace("/auth/login");
+          },
+        },
+      ]);
+  };
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+      confirmLogout();
+      return true;
+    });
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -174,18 +279,18 @@ export default function CitizenDashboard() {
               }}
               moveOnMarkerPress={false}
             >
-            {medics.map((medic) => (
-              <Marker
-                key={medic.id}
-                coordinate={{
-                  latitude: Number(medic.latitude),
-                  longitude: Number(medic.longitude),
-                }}
-                pinColor="red"
-                title={medic.establishmentName}
-                description={medic.providerType}
-              />
-            ))}
+              {medics.map((medic) => (
+                <Marker
+                  key={medic.id}
+                  coordinate={{
+                    latitude: Number(medic.latitude),
+                    longitude: Number(medic.longitude),
+                  }}
+                  pinColor="red"
+                  title={medic.establishmentName}
+                  description={medic.providerType}
+                />
+              ))}
             </MapView>
 
             {/* Floating Glass Header — now with functional search */}
@@ -210,6 +315,10 @@ export default function CitizenDashboard() {
                   <TouchableOpacity style={styles.glassBellBtn} activeOpacity={0.7} onPress={() => setIsNotificationsOpen(true)}>
                     <Bell color="#1D2D44" size={18} />
                     {unreadCount > 0 && <View style={styles.badgeDot} />}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.glassBellBtn} activeOpacity={0.7} onPress={confirmLogout}>
+                    <LogOut color="#D62828" size={17} />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -242,8 +351,8 @@ export default function CitizenDashboard() {
                 <TouchableOpacity
                   activeOpacity={0.85}
                   style={styles.sosButton}
-                  onPress={sendEmergencyRequest}
-                  >
+                  onPress={() => openLocationChoice("emergency")}
+                >
                   <View style={styles.sosGlossHighlight} />
                   <ShieldAlert color="white" size={34} strokeWidth={2.2} />
                   <Text style={styles.sosText}>SOS</Text>
@@ -252,7 +361,7 @@ export default function CitizenDashboard() {
                 <TouchableOpacity
                   activeOpacity={0.85}
                   style={styles.standbyButton}
-                  onPress={sendStandbyRequest}
+                  onPress={() => openLocationChoice("standby")}
                 >
                   <View style={styles.standbyGlossHighlight} />
                   <Clock color="white" size={32} strokeWidth={2.2} />
@@ -261,12 +370,12 @@ export default function CitizenDashboard() {
               </View>
 
               {/* Functional Dashboard Floating Emergency broadcast button */}
-              <TouchableOpacity 
-                style={styles.smsHintBtn} 
+              <TouchableOpacity
+                style={styles.smsHintBtn}
                 activeOpacity={0.75}
                 onPress={() => {
                   // Grabs first available medical unit phone record or falls back to system dispatch numbers
-                  const primaryResponder = medics[0]?.phone || "999"; 
+                  const primaryResponder = medics[0]?.phone || "999";
                   triggerSMSFallback(primaryResponder);
                 }}
               >
@@ -339,10 +448,10 @@ export default function CitizenDashboard() {
 
         {/* First Aid tab — heading only, no static data */}
         {activeTab === "first_aid" && (
-        <View style={{ flex: 1, paddingTop: 50 }}> 
-          <FirstAid />
-        </View>
-      )}
+          <View style={{ flex: 1, paddingTop: 50 }}>
+            <FirstAid />
+          </View>
+        )}
 
         {/* Ambulances tab — Rendering Dynamic fleet data */}
         {activeTab === "ambulances" && (
@@ -391,13 +500,96 @@ export default function CitizenDashboard() {
       </View>
 
       {/**Notification Sheet Overlay */}
-      <NotificationsSheet 
-      isOpen={isNotificationsOpen} 
-      onClose={() => setIsNotificationsOpen(false)} 
+      <NotificationsSheet
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
       />
+
+      {/* Location Choice Modal — shown for both SOS and Standby, routes via pendingRequestType */}
+      {locationModalVisible && (
+        <View style={locationStyles.overlay}>
+          <View style={locationStyles.sheet}>
+            <View style={locationStyles.handle} />
+            <Text style={locationStyles.title}>
+              {pendingRequestType === "emergency" ? "Send Emergency SOS" : "Request Standby"}
+            </Text>
+            <Text style={locationStyles.subtitle}>Which location should we send?</Text>
+
+            {isFetchingLocation ? (
+              <View style={locationStyles.loadingRow}>
+                <ActivityIndicator color="#0057B8" />
+                <Text style={locationStyles.loadingText}>Getting location...</Text>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={locationStyles.optionBtn}
+                  activeOpacity={0.85}
+                  onPress={handleUseCurrentLocation}
+                >
+                  <Navigation color="#0057B8" size={20} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={locationStyles.optionTitle}>Use Current Location</Text>
+                    <Text style={locationStyles.optionSub}>Get my live GPS position</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={locationStyles.optionBtn}
+                  activeOpacity={0.85}
+                  onPress={handleUseRegisteredLocation}
+                >
+                  <MapPin color="#0057B8" size={20} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={locationStyles.optionTitle}>Use Registered Location</Text>
+                    <Text style={locationStyles.optionSub}>Use the address on my profile</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={locationStyles.cancelBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setLocationModalVisible(false)}
+                >
+                  <Text style={locationStyles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Auto-popup dispatch toast — appears without needing to open the bell, auto-dismisses in 3s */}
+      {dispatchToast && (
+        <View style={toastStyles.wrapper} pointerEvents="box-none">
+          <TouchableOpacity
+            style={toastStyles.card}
+            activeOpacity={0.9}
+            onPress={() => {
+              setDispatchToast(null);
+              setIsNotificationsOpen(true);
+            }}
+          >
+            <View style={toastStyles.iconCircle}>
+              <Ambulance color="#2E654C" size={22} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={toastStyles.title}>Ambulance Dispatched</Text>
+              <Text style={toastStyles.detail}>
+                {dispatchToast.driverName} • {dispatchToast.plateNumber}
+              </Text>
+              {dispatchToast.estimatedArrivalMinutes ? (
+                <Text style={toastStyles.eta}>ETA: {dispatchToast.estimatedArrivalMinutes} mins</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity onPress={() => setDispatchToast(null)} hitSlop={10}>
+              <X color="#94A3B8" size={18} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
-
 }
 
 const styles = StyleSheet.create({
@@ -405,7 +597,6 @@ const styles = StyleSheet.create({
   mainContent: { flex: 1 },
   mockMap: { width: "100%", height: height, backgroundColor: "#DCE9F5" },
 
-  // Floating glass header
   floatingHeader: { position: "absolute", top: 56, left: 18, right: 18, zIndex: 15 },
   glassPill: {
     flexDirection: "row",
@@ -457,9 +648,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#D62828",
   },
 
-  // Functional search pill (replaces header when search opens)
-
-  // Functional search pill (replaces header when search opens)
   searchPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -483,7 +671,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // SOS + Standby floating assembly — equal-sized circular pair
   sosWrapper: { position: "absolute", top: height * 0.32, left: 0, right: 0, alignItems: "center", zIndex: 20 },
   sosRow: { flexDirection: "row", alignItems: "center", gap: 22 },
   sosButton: {
@@ -542,7 +729,6 @@ const styles = StyleSheet.create({
   },
   standbyButtonText: { color: "white", fontSize: 13, fontWeight: "800", letterSpacing: 0.6, marginTop: 4 },
 
-  // Icon-only SMS fallback hint — no body text caption anymore
   smsHintBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -560,7 +746,6 @@ const styles = StyleSheet.create({
   },
   smsHintText: { fontSize: 11, fontWeight: "700", color: "#0057B8" },
 
-  // Bottom sheet
   bottomSheet: {
     position: "absolute",
     bottom: 0,
@@ -646,11 +831,9 @@ const styles = StyleSheet.create({
     borderColor: "#E6F4FE",
   },
 
-  // Generic screens — heading only, no static data
   scroller: { flex: 1, padding: 20, paddingTop: 60 },
   screenHeader: { fontSize: 24, fontWeight: "800", color: "#0057B8", marginBottom: 5 },
 
-  // Floating glossy tab bar / dock
   tabBarWrapper: {
     position: "absolute",
     bottom: 22,
@@ -689,4 +872,90 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   tabLabel: { fontSize: 10.5, fontWeight: "700" },
+
+  logoutHeaderBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFEAE8",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
+
+const locationStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+    zIndex: 200,
+  },
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 34,
+  },
+  handle: {
+    width: 40, height: 5, borderRadius: 3,
+    backgroundColor: "#E0E6ED",
+    alignSelf: "center",
+    marginBottom: 18,
+  },
+  title: { fontSize: 18, fontWeight: "800", color: "#1D2D44", textAlign: "center" },
+  subtitle: { fontSize: 13, color: "#8A9BAE", textAlign: "center", marginTop: 4, marginBottom: 20 },
+  optionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FBFE",
+    borderWidth: 1,
+    borderColor: "#EDF2F8",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  optionTitle: { fontSize: 14.5, fontWeight: "700", color: "#1D2D44" },
+  optionSub: { fontSize: 12, color: "#8A9BAE", marginTop: 2 },
+  cancelBtn: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+  cancelText: { fontSize: 14, fontWeight: "700", color: "#D62828" },
+  loadingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 20 },
+  loadingText: { fontSize: 13, color: "#0057B8", fontWeight: "600" },
+});
+
+const toastStyles = StyleSheet.create({
+  wrapper: {
+    position: "absolute",
+    top: 120,
+    left: 18,
+    right: 18,
+    zIndex: 300,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0F9F4",
+    borderWidth: 1,
+    borderColor: "#B8DCC9",
+    borderRadius: 20,
+    padding: 14,
+    shadowColor: "#1D2D44",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#E3EFEA",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: { fontSize: 14, fontWeight: "800", color: "#2E654C" },
+  detail: { fontSize: 12.5, color: "#477E64", fontWeight: "600", marginTop: 2 },
+  eta: { fontSize: 11.5, color: "#2E654C", fontWeight: "700", marginTop: 3 },
 });

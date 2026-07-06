@@ -15,17 +15,24 @@ export const listenToLiveStreamUpdates = (onUpdateReceived) => {
         const list = [];
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            
-            // Update this condition in your notification service file
+
             if (
                 data.status === "dispatched" ||
-                data.status === "pending_payment" || 
-                data.status === "completed" || // Allow completed requests to be caught!
+                data.status === "pending_payment" ||
+                data.status === "completed" ||
                 data.paymentPending === true
             ) {
                 list.push({ id: docSnap.id, ...data });
             }
         });
+
+        // Sort newest first — uses whichever timestamp is most relevant to that item's current state
+        list.sort((a, b) => {
+            const aTime = a.dispatchedAt?.seconds || a.completedAt?.seconds || a.createdAt?.seconds || 0;
+            const bTime = b.dispatchedAt?.seconds || b.completedAt?.seconds || b.createdAt?.seconds || 0;
+            return bTime - aTime;
+        });
+
         onUpdateReceived(list);
     }, (error) => {
         console.error("Live triage stream interception error. ", error);

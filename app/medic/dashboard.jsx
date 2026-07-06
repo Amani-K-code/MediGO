@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions } from "react-native";
-import { LayoutDashboard, Radio, ShieldCheck, Ambulance, User, AlertCircle, ChevronRight, Bell, FileText } from "lucide-react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, BackHandler, Alert } from "react-native";
+import { LayoutDashboard, Radio, ShieldCheck, Ambulance, User, AlertCircle, ChevronRight, Bell, FileText, LogOut } from "lucide-react-native";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import MapView, { Marker } from "react-native-maps";
 import RequestsScreen from "./requests";
 import HistoryScreen from "./history";
 import MedicProfile from "./medicProfile";
+import { getAuth, signOut } from "firebase/auth";
+import { useRouter } from "expo-router";
 
 const { height } = Dimensions.get("window");
 
@@ -18,6 +20,7 @@ export default function MedicDashboard() {
   const [requests, setRequests] = useState([]);
   const [requestFilter, setRequestFilter] = useState("emergency");
   const [autoOpenRequestId, setAutoOpenRequestId] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -56,6 +59,29 @@ export default function MedicDashboard() {
   const standbyRequests = requests.filter((req) => req.type === "standby" && req.status !== "completed");
   const currentFilteredRequests = requestFilter === "emergency" ? emergencyRequests : standbyRequests;
 
+  const confirmLogout = () => {
+    Alert.alert(
+      "Confirm Logout", "Are you sure you want to log out?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Logout", 
+          style: "destructive",
+          onPress: async () => {
+            await signOut(getAuth());
+            router.replace("/auth/login");
+          }
+        },
+      ]);
+    };
+
+    useEffect(() => {
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+        confirmLogout();
+        return true;
+      });
+
+      return () => backHandler.remove();
+    }, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.mainContent}>
@@ -92,7 +118,7 @@ export default function MedicDashboard() {
                     <ShieldCheck color="#0057B8" size={16} />
                   </View>
                   <View>
-                    <Text style={styles.glassPillTitle}>MediGo EMS</Text>
+                    <Text style={styles.glassPillTitle}>MediGo</Text>
                     <Text style={styles.glassPillSub}>Central Terminal</Text>
                   </View>
                 </View>
@@ -101,6 +127,10 @@ export default function MedicDashboard() {
                   <Text style={styles.onlineText}>Live</Text>
                 </View>
               </View>
+
+              <TouchableOpacity style={styles.logoutHeaderBtn} onPress={confirmLogout} activeOpacity={0.7}>
+                <LogOut color="#D62828" size={16} />
+              </TouchableOpacity>
             </View>
 
             {/* Metrics Caps */}
@@ -263,4 +293,12 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: 10, fontWeight: "700", marginTop: 2 },
   emptyState: { padding: 20, alignItems: "center" },
   emptyStateText: { color: "#94A3B8", fontSize: 12 },
+  logoutHeaderBtn: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: "#FFEAE8",
+  justifyContent: "center",
+  alignItems: "center",
+},
 });

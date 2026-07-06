@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Linking } from "react-native";
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase/firebaseConfig";
 import { AlertCircle, CheckCircle, Clock, ShieldAlert, Navigation, MapPin } from "lucide-react-native";
@@ -50,6 +50,21 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
     }
   }, [autoTriggerRequestId, requests]);
 
+  // Opens the patient's coordinates in the device's native maps app
+  const openInMaps = (latitude, longitude) => {
+    if (!latitude || !longitude) {
+      Alert.alert("No Location", "This request has no location data.");
+      return;
+    }
+    const url = Platform.select({
+      ios: `maps:0,0?q=${latitude},${longitude}`,
+      android: `geo:0,0?q=${latitude},${longitude}`,
+    });
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`);
+    });
+  };
+
   // Handles confirming dispatch of ambulance for a request
   const handleConfirmDispatch = async () => {
     if (!assigningRequestId) return;
@@ -59,11 +74,11 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
         status: "dispatched",
         driverName: driverName || "Paramedic Team",
         plateNumber: plateNumber || "N/A",
-        estimatedArrivalMinutes: selectedETA, 
+        estimatedArrivalMinutes: selectedETA,
         dispatchedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      
+
       setAssigningRequestId(null);
       setDriverName("");
       setPlateNumber("");
@@ -85,12 +100,12 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
     } catch (error) {
       console.error("Error marking request as completed: ", error);
     }
-  }; 
+  };
 
   const filteredRequests = requests.filter((req) => {
     if (filter === "pending") return req.status === "pending" || req.status === "requested";
-    if (filter === "active") return req.status === "dispatched" ;
-    return req.status !== "completed"; 
+    if (filter === "active") return req.status === "dispatched";
+    return req.status !== "completed";
   });
 
   // Helper: initials avatar from name, for glossy card identity badge
@@ -190,6 +205,16 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
                           Lat: {req.latitude?.toString().slice(0, 8)}, Lon: {req.longitude?.toString().slice(0, 8)}
                         </Text>
                       </View>
+
+                      {/* View on Map — opens native maps app pinned to patient's coordinates */}
+                      <TouchableOpacity
+                        style={styles.viewMapBtn}
+                        activeOpacity={0.8}
+                        onPress={() => openInMaps(req.latitude, req.longitude)}
+                      >
+                        <Navigation size={12} color="#0057B8" />
+                        <Text style={styles.viewMapText}>View on Map</Text>
+                      </TouchableOpacity>
                     </View>
 
                     {!isEmergency && (
@@ -260,8 +285,8 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
       {/* Fleet Allocation Data Centered Modal Layer */}
       {assigningRequestId !== null && (
         <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === "ios" ? "padding" : "height"} 
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ width: "100%", alignItems: "center", justifyContent: "center" }}
           >
             <View style={styles.modalContent}>
@@ -269,18 +294,18 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
               <Text style={styles.modalSub}>Provide active transponder credentials for citizen notifications stream.</Text>
 
               <Text style={styles.fieldLabel}>Driver / Lead Paramedic Name</Text>
-              <TextInput 
-                style={styles.textInput} 
-                placeholder="e.g. Officer Alex Kiprop" 
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Officer Alex Kiprop"
                 value={driverName}
                 onChangeText={setDriverName}
                 placeholderTextColor="#94A3B8"
               />
 
               <Text style={styles.fieldLabel}>Ambulance Plate Number</Text>
-              <TextInput 
-                style={styles.textInput} 
-                placeholder="e.g. KGA 482Y" 
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. KGA 482Y"
                 value={plateNumber}
                 onChangeText={setPlateNumber}
                 placeholderTextColor="#94A3B8"
@@ -290,8 +315,8 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
               <Text style={styles.fieldLabel}>Select Expected ETA Option</Text>
               <View style={styles.pickerRow}>
                 {[5, 10, 20].map((mins) => (
-                  <TouchableOpacity 
-                    key={mins} 
+                  <TouchableOpacity
+                    key={mins}
                     style={[styles.pickerCard, selectedETA === mins && styles.pickerCardSelected]}
                     onPress={() => setSelectedETA(mins)}
                   >
@@ -336,7 +361,6 @@ const styles = StyleSheet.create({
   },
   loadingText: { color: "#0057B8", fontWeight: "600", fontSize: 13, textAlign: "center" },
 
-  // Floating glass header
   floatingHeader: { paddingTop: 56, paddingHorizontal: 18, paddingBottom: 16 },
   glassPill: {
     flexDirection: "row",
@@ -389,7 +413,6 @@ const styles = StyleSheet.create({
 
   scrollContent: { paddingHorizontal: 18, paddingBottom: 130, paddingTop: 4 },
 
-  // Card — glossy 3D look
   card: {
     backgroundColor: "#fff",
     borderRadius: 22,
@@ -408,7 +431,6 @@ const styles = StyleSheet.create({
   },
   cardBody: { padding: 18 },
 
-  // Requesting-help banner strip (matches reference image)
   requestingBanner: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -423,7 +445,6 @@ const styles = StyleSheet.create({
   requestingBannerText: { fontSize: 11.5, fontWeight: "800", color: "#D62828", letterSpacing: 0.3 },
   requestingBannerTime: { fontSize: 12, fontWeight: "600", color: "#D62828" },
 
-  // Identity row
   identityRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   avatarCircle: {
     width: 50,
@@ -455,7 +476,19 @@ const styles = StyleSheet.create({
   locationText: { fontSize: 12, color: "#94A3B8", fontWeight: "500", flex: 1 },
   timeAgoText: { fontSize: 13, color: "#94A3B8" },
 
-  // Pills
+  viewMapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#E6F4FE",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  viewMapText: { fontSize: 11, fontWeight: "700", color: "#0057B8" },
+
   pillRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
   typePill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   typePillRed: { backgroundColor: "#FCE8E6" },
@@ -471,7 +504,6 @@ const styles = StyleSheet.create({
   trackingTitle: { fontSize: 12, fontWeight: "700", color: "#1E40AF", marginBottom: 4 },
   trackingDetail: { fontSize: 12, color: "#1E40AF", fontWeight: "500", marginTop: 2 },
 
-  // Action row — glossy pill buttons
   actionRow: { marginTop: 16 },
   btnAccept: {
     flexDirection: "row",
@@ -519,7 +551,6 @@ const styles = StyleSheet.create({
   },
   btnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 
-  // Empty state
   emptyState: { padding: 40, alignItems: "center", justifyContent: "center", marginTop: 40, gap: 14 },
   emptyIconCircle: {
     width: 68,
@@ -536,7 +567,6 @@ const styles = StyleSheet.create({
   },
   emptyText: { color: "#64748B", fontSize: 13, fontWeight: "500", textAlign: "center" },
 
-  // Modal — unchanged structurally, same flow as before
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", paddingHorizontal: 20, zIndex: 100 },
   modalContent: { backgroundColor: "#fff", borderRadius: 24, padding: 24, width: "100%", maxWidth: 400, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
   modalTitle: { fontSize: 18, fontWeight: "800", color: "#1D2D44" },
