@@ -72,7 +72,7 @@ export default function Profile() {
         style: "destructive",
         onPress: async () => {
           await signOut(auth);
-          router.replace("/authlogin");
+          router.replace("/auth/login");
         },
       },
     ]);
@@ -177,7 +177,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    // Was 40 — the floating tab bar sits at bottom:22 with height:68,
+    // so the logout button was getting tucked behind it. 140 clears it
+    // with a comfortable gap.
+    paddingBottom: 140,
     gap: 16,
   },
   loaderBox: {

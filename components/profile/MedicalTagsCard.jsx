@@ -1,28 +1,66 @@
 import React, { useState } from "react";
 import {
-  StyleSheet, Text, TextInput, TouchableOpacity, View
+  StyleSheet, Text, TouchableOpacity, View, Modal, FlatList
 } from "react-native";
-import { Check, Plus, X } from "lucide-react-native";
+import { Check, Plus, X, ChevronDown } from "lucide-react-native";
+
+// ── Same option lists used in register-citizen.jsx, minus "None" ──
+// ("None" doesn't make sense as an addable tag here — it's just the
+// registration default before anything is picked.)
+const CHRONIC_CONDITIONS = [
+  "Hypertension",
+  "Diabetes",
+  "Chronic Kidney Disease",
+  "Coronary Artery Disease",
+  "Asthma / COPD",
+  "Liver Disease",
+  "Thyroid Disorder",
+  "Heart Failure",
+  "Stroke / TIA History",
+  "Epilepsy",
+];
+
+const ALLERGIES = [
+  "Penicillin",
+  "Sulfa Drugs",
+  "Latex",
+  "NSAIDs (Ibuprofen, Aspirin)",
+  "Contrast Dye (Iodine)",
+  "Opioids",
+  "Local Anesthetics",
+  "Egg Protein",
+  "Peanuts / Tree Nuts",
+  "Chlorhexidine",
+];
 
 export default function MedicalTagsCard({ conditions = [], allergies = [], onSave, onError }) {
   const [addingTag, setAddingTag] = useState(false);
-  const [newTagText, setNewTagText] = useState("");
   const [newTagType, setNewTagType] = useState("condition"); // "condition" | "allergy"
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const optionsForType = newTagType === "condition" ? CHRONIC_CONDITIONS : ALLERGIES;
+  const alreadyAdded = newTagType === "condition" ? conditions : allergies;
+  const availableOptions = optionsForType.filter((opt) => !alreadyAdded.includes(opt));
 
   const handleCancelAdd = () => {
     setAddingTag(false);
-    setNewTagText("");
+    setSelectedOption(null);
+  };
+
+  const handleSwitchType = (type) => {
+    setNewTagType(type);
+    setSelectedOption(null);
   };
 
   const handleConfirmAddTag = async () => {
-    const trimmed = newTagText.trim();
-    if (!trimmed) return;
+    if (!selectedOption) return;
 
     const updatedConditions =
-      newTagType === "condition" ? [...conditions, trimmed] : conditions;
+      newTagType === "condition" ? [...conditions, selectedOption] : conditions;
     const updatedAllergies =
-      newTagType === "allergy" ? [...allergies, trimmed] : allergies;
+      newTagType === "allergy" ? [...allergies, selectedOption] : allergies;
 
     setSubmitting(true);
     try {
@@ -31,7 +69,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
         allergies: updatedAllergies,
       });
       if (res.ok) {
-        setNewTagText("");
+        setSelectedOption(null);
         setAddingTag(false);
       } else {
         onError?.(res.message);
@@ -78,7 +116,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
                 styles.typeChip,
                 newTagType === "condition" ? styles.typeChipActive : styles.typeChipInactive,
               ]}
-              onPress={() => setNewTagType("condition")}
+              onPress={() => handleSwitchType("condition")}
             >
               <Text
                 style={[
@@ -96,7 +134,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
                 styles.typeChip,
                 newTagType === "allergy" ? styles.typeChipActive : styles.typeChipInactive,
               ]}
-              onPress={() => setNewTagType("allergy")}
+              onPress={() => handleSwitchType("allergy")}
             >
               <Text
                 style={[
@@ -113,24 +151,87 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
               <X color="#6B7280" size={16} />
             </TouchableOpacity>
           </View>
+
           <View style={styles.addInputRow}>
-            <TextInput
-              style={styles.addInput}
-              placeholder="e.g. Asthma"
-              placeholderTextColor="#6B7280"
-              value={newTagText}
-              onChangeText={setNewTagText}
-            />
             <TouchableOpacity
-              style={styles.confirmAddButton}
+              style={styles.dropdownButton}
+              activeOpacity={0.7}
+              onPress={() => setPickerVisible(true)}
+            >
+              <Text
+                style={[
+                  styles.dropdownButtonText,
+                  !selectedOption && styles.dropdownPlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {selectedOption || `Select ${newTagType === "condition" ? "a condition" : "an allergy"}`}
+              </Text>
+              <ChevronDown color="#6B7280" size={16} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmAddButton,
+                !selectedOption && styles.confirmAddButtonDisabled,
+              ]}
               onPress={handleConfirmAddTag}
-              disabled={submitting}
+              disabled={submitting || !selectedOption}
             >
               <Check color="#FFFFFF" size={16} />
             </TouchableOpacity>
           </View>
         </View>
       )}
+
+      {/* Dropdown modal — same list-picker pattern as registration */}
+      <Modal
+        visible={pickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPickerVisible(false)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {newTagType === "condition" ? "Chronic Condition" : "Allergy"}
+            </Text>
+            <FlatList
+              data={availableOptions}
+              keyExtractor={(item) => item}
+              style={{ maxHeight: 320 }}
+              ListEmptyComponent={
+                <Text style={styles.emptyOptionsText}>All options already added.</Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => {
+                    setSelectedOption(item);
+                    setPickerVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      item === selectedOption && styles.optionTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  {item === selectedOption && (
+                    <Check color="#0066FF" size={16} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.pillsWrap}>
         {conditions.map((value, index) => (
@@ -228,14 +329,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  addInput: {
+  dropdownButton: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#F0F4FF",
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
+  },
+  dropdownButtonText: {
     fontSize: 14,
     color: "#0A0F2C",
+    flex: 1,
+    marginRight: 8,
+  },
+  dropdownPlaceholder: {
+    color: "#6B7280",
   },
   confirmAddButton: {
     width: 36,
@@ -245,13 +356,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  confirmAddButtonDisabled: {
+    backgroundColor: "#B7CFFF",
+  },
   pillsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
-  // Design.md does not define an "Emergency Light" tint; derived here as
-  // the same relationship Primary Light (#E8F0FF) has to Primary (#0066FF).
   conditionPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -279,5 +391,49 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: "#C62828",
+  },
+  // Dropdown modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0A0F2C",
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    paddingTop: 4,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  optionText: {
+    fontSize: 15,
+    color: "#0A0F2C",
+  },
+  optionTextSelected: {
+    color: "#0066FF",
+    fontWeight: "700",
+  },
+  emptyOptionsText: {
+    fontSize: 13,
+    color: "#6B7280",
+    textAlign: "center",
+    paddingVertical: 16,
   },
 });
