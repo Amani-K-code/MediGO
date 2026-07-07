@@ -100,13 +100,31 @@ export default function MedicDashboard() {
               moveOnMarkerPress={false}
             >
               {citizens.map((c) => (
-                <Marker key={c.id} coordinate={{ latitude: Number(c.latitude) || -1.286389, longitude: Number(c.longitude) || 36.817223 }} pinColor="red" title={c.fullName || "Citizen"} />
+                <Marker
+                  key={c.id}
+                  coordinate={{ latitude: Number(c.latitude) || -1.286389, longitude: Number(c.longitude) || 36.817223 }}
+                  pinColor="red"
+                  title={c.fullName || "Citizen"}
+                  description="Citizen"
+                />
               ))}
               {medics.map((m) => (
-                <Marker key={m.id} coordinate={{ latitude: Number(m.latitude) || -1.286389, longitude: Number(m.longitude) || 36.817223 }} pinColor="blue" title={m.fullName || "Medic"} />
+                <Marker
+                  key={m.id}
+                  coordinate={{ latitude: Number(m.latitude) || -1.286389, longitude: Number(m.longitude) || 36.817223 }}
+                  pinColor="blue"
+                  title={m.establishmentName || "Medic"}
+                  description={m.providerType || "Facility"}
+                />
               ))}
               {ambulances.map((a) => (
-                <Marker key={a.id} coordinate={{ latitude: Number(a.latitude) || -1.286389, longitude: Number(a.longitude) || 36.817223 }} pinColor="green" title={a.fullName || "Ambulance Team"} />
+                <Marker
+                  key={a.id}
+                  coordinate={{ latitude: Number(a.latitude) || -1.286389, longitude: Number(a.longitude) || 36.817223 }}
+                  pinColor="green"
+                  title={a.establishmentName || "Ambulance Team"}
+                  description={a.providerType || "Ambulance"}
+                />
               ))}
             </MapView>
 
@@ -126,11 +144,10 @@ export default function MedicDashboard() {
                   <View style={styles.greenPulse} />
                   <Text style={styles.onlineText}>Live</Text>
                 </View>
+                <TouchableOpacity style={styles.logoutHeaderBtn} onPress={confirmLogout} activeOpacity={0.7}>
+                  <LogOut color="#D62828" size={16} />
+                </TouchableOpacity>
               </View>
-
-              <TouchableOpacity style={styles.logoutHeaderBtn} onPress={confirmLogout} activeOpacity={0.7}>
-                <LogOut color="#D62828" size={16} />
-              </TouchableOpacity>
             </View>
 
             {/* Metrics Caps */}

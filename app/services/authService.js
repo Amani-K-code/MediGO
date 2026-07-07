@@ -21,7 +21,10 @@ export const registerCitizen = async (
     residence,
     latitude,
     longitude,
-    password
+    password,
+    bloodType,
+    chronicCondition,
+    allergies,
 ) => {
 
     const userCredential = 
@@ -44,6 +47,9 @@ export const registerCitizen = async (
             residence,
             latitude,
             longitude,
+            bloodType,
+            chronicCondition,
+            allergies,
             role: "citizen",
             createdAt: new Date()
         }

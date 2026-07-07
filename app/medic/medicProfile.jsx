@@ -289,7 +289,7 @@ export default function MedicProfile() {
         style: "destructive",
         onPress: async () => {
           await signOut(auth);
-          router.replace("/login");
+          router.replace("/auth/login");
         },
       },
     ]);

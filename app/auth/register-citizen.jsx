@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState,useEffect } from "react";
-import { Callout } from "react-native-maps";
+import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     ScrollView,
     StatusBar,
@@ -13,12 +13,44 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { registerCitizen } from "../services/authService";
 import * as Location from "expo-location";
-import MapView, { Marker } from "react-native-maps";
+import MapView from "react-native-maps";
+
+// ── Dropdown option lists ──
+const BLOOD_TYPES = ["None", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+const CHRONIC_CONDITIONS = [
+  "None",
+  "Hypertension",
+  "Diabetes",
+  "Chronic Kidney Disease",
+  "Coronary Artery Disease",
+  "Asthma / COPD",
+  "Liver Disease",
+  "Thyroid Disorder",
+  "Heart Failure",
+  "Stroke / TIA History",
+  "Epilepsy",
+];
+
+const ALLERGIES = [
+  "None",
+  "Penicillin",
+  "Sulfa Drugs",
+  "Latex",
+  "NSAIDs (Ibuprofen, Aspirin)",
+  "Contrast Dye (Iodine)",
+  "Opioids",
+  "Local Anesthetics",
+  "Egg Protein",
+  "Peanuts / Tree Nuts",
+  "Chlorhexidine",
+];
 
 export default function RegisterCitizen() {
   const router = useRouter();
@@ -39,12 +71,46 @@ export default function RegisterCitizen() {
     longitudeDelta: 0.05,
   });
 
+  // --- New medical info fields (also sent to backend) ---
+  const [bloodType, setBloodType] = useState("None");
+  const [chronicCondition, setChronicCondition] = useState("None");
+  const [allergies, setAllergies] = useState("None");
+
   // --- UI-only state (not sent to backend) ---
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  //
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- Step control ---
+  const [step, setStep] = useState(1);
+  const TOTAL_STEPS = 3;
+
+  const goNext = () => {
+    if (step === 1) {
+      if (!fullName || !email || !phone || !residence) {
+        Alert.alert("Missing Fields", "Please fill in all personal details.");
+        return;
+      }
+      if (!password || !confirmPassword) {
+        Alert.alert("Missing Fields", "Please enter and confirm your password.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        Alert.alert("Password Mismatch", "Passwords do not match.");
+        return;
+      }
+      if (password.length < 6) {
+        Alert.alert("Weak Password", "Password must be at least 6 characters.");
+        return;
+      }
+    }
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  };
+
+  const goBack = () => {
+    setStep((s) => Math.max(s - 1, 1));
+  };
 
   const handleRegister = async () => {
     if (!userLocation) {
@@ -52,18 +118,6 @@ export default function RegisterCitizen() {
         "Location Required",
         "Please enable location services before registering."
       );
-      return;
-    }
-    if (!fullName || !email || !phone || !residence || !password) {
-      Alert.alert("Missing Fields", "Please fill in all required fields.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert("Password Mismatch", "Passwords do not match.");
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert("Weak Password", "Password must be at least 6 characters.");
       return;
     }
 
@@ -79,6 +133,9 @@ export default function RegisterCitizen() {
         userLocation?.latitude || null,
         userLocation?.longitude || null,
         password,
+        bloodType,
+        chronicCondition,
+        allergies
       );
       Alert.alert("Account Created!", "Welcome to MediGo.", [
         { text: "Log In", onPress: () => router.replace("/auth/login") },
@@ -92,7 +149,8 @@ export default function RegisterCitizen() {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
+
   const getUserLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
 
@@ -105,31 +163,29 @@ export default function RegisterCitizen() {
     }
 
     try {
-    const loc = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.Highest});
-    
-    setUserLocation({
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
-    });
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+      });
 
-    setMapRegion({
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    });
-    
-  } catch (error) {
-    console.log(error);
-  }
+      setUserLocation({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
 
+      setMapRegion({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    } catch (error) {
+      console.log(error);
+    }
   };
+
   useEffect(() => {
     getUserLocation();
   }, []);
-
-  {/*-- debugging */}
-  console.log("User Location:", userLocation);
 
   return (
     <View style={styles.root}>
@@ -147,7 +203,7 @@ export default function RegisterCitizen() {
             {/* Header */}
             <TouchableOpacity
               style={styles.backBtn}
-              onPress={() => router.back()}
+              onPress={() => (step === 1 ? router.back() : goBack())}
             >
               <Ionicons name="arrow-back" size={20} color="#1F2937" />
             </TouchableOpacity>
@@ -161,235 +217,263 @@ export default function RegisterCitizen() {
               Join as a citizen to access emergency care near you
             </Text>
 
-            {/* Step dots */}
+            {/* Step dots — functional, reflects current step */}
             <View style={styles.dotsRow}>
-              <View style={[styles.dot, styles.dotActive]} />
-              <View style={styles.dot} />
-              <View style={styles.dot} />
-            </View>
-
-            {/* ── Personal Details ── */}
-            <Text style={styles.sectionLabel}>Personal Details</Text>
-
-            <InputField
-              placeholder="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-              icon="person-outline"
-              autoCapitalize="words"
-            />
-            <InputField
-              placeholder="Email Address"
-              value={email}
-              onChangeText={setEmail}
-              icon="mail-outline"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <InputField
-              placeholder="Phone Number"
-              value={phone}
-              onChangeText={setPhone}
-              icon="call-outline"
-              keyboardType="phone-pad"
-            />
-            <InputField
-              placeholder="Residence / Area"
-              value={residence}
-              onChangeText={setResidence}
-              icon="location-outline"
-            />
-
-            {/* ── Security ── */}
-            <Text style={styles.sectionLabel}>Security</Text>
-
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#9CA3AF"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? "eye-outline" : "eye-off-outline"}
-                  size={20}
-                  color="#9CA3AF"
+              {[1, 2, 3].map((i) => (
+                <View
+                  key={i}
+                  style={[styles.dot, i <= step && styles.dotActive]}
                 />
-              </TouchableOpacity>
+              ))}
             </View>
 
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#9CA3AF"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirm}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-                <Ionicons
-                  name={showConfirm ? "eye-outline" : "eye-off-outline"}
-                  size={20}
-                  color="#9CA3AF"
+            {/* ── STEP 1: Personal Details + Security ── */}
+            {step === 1 && (
+              <>
+                <Text style={styles.sectionLabel}>Personal Details</Text>
+
+                <InputField
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  icon="person-outline"
+                  autoCapitalize="words"
                 />
-              </TouchableOpacity>
-            </View>
-
-            {/* ── Emergency Contact ── */}
-            <Text style={styles.sectionLabel}>Emergency Contact</Text>
-
-            <InputField
-              placeholder="Contact Name"
-              value={nextOfKin}
-              onChangeText={setNextOfKin}
-              icon="people-outline"
-              autoCapitalize="words"
-            />
-            <InputField
-              placeholder="Contact Phone"
-              value={nextOfKinPhone}
-              onChangeText={setNextOfKinPhone}
-              icon="call-outline"
-              keyboardType="phone-pad"
-            />
-
-            {/* ── Location Selection ── */}
-            <View
-              style={{
-                borderRadius: 16,
-                overflow: "hidden",
-                marginBottom: 20,
-                position: "relative",
-              }}
-            >
-              <MapView
-                style={{
-                  height: 250,
-                }}
-                region={mapRegion}
-                onRegionChangeComplete={(region) =>
-                  setMapRegion(region)
-                }
-              />
-
-              {/* Fixed Crosshair */}
-              <View
-                pointerEvents="none"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: [
-                    { translateX: -15 },
-                    { translateY: -30 },
-                  ],
-                }}
-              >
-                <Ionicons
-                  name="location"
-                  size={30}
-                  color="#D62828"
+                <InputField
+                  placeholder="Email Address"
+                  value={email}
+                  onChangeText={setEmail}
+                  icon="mail-outline"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
-              </View>
-            </View>
+                <InputField
+                  placeholder="Phone Number"
+                  value={phone}
+                  onChangeText={setPhone}
+                  icon="call-outline"
+                  keyboardType="phone-pad"
+                />
+                <InputField
+                  placeholder="Residence / Area"
+                  value={residence}
+                  onChangeText={setResidence}
+                  icon="location-outline"
+                />
 
-            {/* Location Buttons */}
+                <Text style={styles.sectionLabel}>Security</Text>
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#0057B8",
-                padding: 14,
-                borderRadius: 12,
-                marginBottom: 10,
-              }}
-              onPress={getUserLocation}
-            >
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  textAlign: "center",
-                  fontWeight: "600",
-                }}
-              >
-                Use My Current Location
-              </Text>
-            </TouchableOpacity>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons
+                      name={showPassword ? "eye-outline" : "eye-off-outline"}
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </TouchableOpacity>
+                </View>
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#2A9D8F",
-                padding: 14,
-                borderRadius: 12,
-                marginBottom: 12,
-              }}
-              onPress={() => {
-                setUserLocation({
-                  latitude: mapRegion.latitude,
-                  longitude: mapRegion.longitude,
-                });
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm Password"
+                    placeholderTextColor="#9CA3AF"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirm}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
+                    <Ionicons
+                      name={showConfirm ? "eye-outline" : "eye-off-outline"}
+                      size={20}
+                      color="#9CA3AF"
+                    />
+                  </TouchableOpacity>
+                </View>
 
-                Alert.alert(
-                  "Location Saved",
-                  `Lat: ${mapRegion.latitude.toFixed(6)}
-            Lng: ${mapRegion.longitude.toFixed(6)}`
-                );
-              }}
-            >
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  textAlign: "center",
-                  fontWeight: "600",
-                }}
-              >
-                Confirm Location
-              </Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.nextBtn} onPress={goNext}>
+                  <Text style={styles.nextBtnText}>Continue →</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
-            {/* Selected Coordinates */}
+            {/* ── STEP 2: Emergency Contact + Medical Info ── */}
+            {step === 2 && (
+              <>
+                <Text style={styles.sectionLabel}>Emergency Contact</Text>
 
-            <View
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 20,
-              }}
-            >
-              <Text>
-                Latitude:{" "}
-                {userLocation
-                  ? userLocation.latitude.toFixed(6)
-                  : "Not selected"}
-              </Text>
+                <InputField
+                  placeholder="Contact Name"
+                  value={nextOfKin}
+                  onChangeText={setNextOfKin}
+                  icon="people-outline"
+                  autoCapitalize="words"
+                />
+                <InputField
+                  placeholder="Contact Phone"
+                  value={nextOfKinPhone}
+                  onChangeText={setNextOfKinPhone}
+                  icon="call-outline"
+                  keyboardType="phone-pad"
+                />
 
-              <Text>
-                Longitude:{" "}
-                {userLocation
-                  ? userLocation.longitude.toFixed(6)
-                  : "Not selected"}
-              </Text>
-            </View>
+                <Text style={styles.sectionLabel}>Medical Info</Text>
 
-            {/* ── Submit ── */}
-            <TouchableOpacity
-              style={[styles.submitBtn, isLoading && styles.submitBtnDisabled]}
-              onPress={handleRegister}
-              disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitBtnText}>Create Account →</Text>
-              )}
-            </TouchableOpacity>
+                <DropdownField
+                  label="Blood Group"
+                  icon="water-outline"
+                  value={bloodType}
+                  options={BLOOD_TYPES}
+                  onSelect={setBloodType}
+                />
+                <DropdownField
+                  label="Chronic Condition"
+                  icon="medkit-outline"
+                  value={chronicCondition}
+                  options={CHRONIC_CONDITIONS}
+                  onSelect={setChronicCondition}
+                />
+                <DropdownField
+                  label="Allergies"
+                  icon="alert-circle-outline"
+                  value={allergies}
+                  options={ALLERGIES}
+                  onSelect={setAllergies}
+                />
+
+                <View style={styles.stepBtnRow}>
+                  <TouchableOpacity style={styles.backStepBtn} onPress={goBack}>
+                    <Text style={styles.backStepBtnText}>Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.nextBtnHalf} onPress={goNext}>
+                    <Text style={styles.nextBtnText}>Continue →</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* ── STEP 3: Location ── */}
+            {step === 3 && (
+              <>
+                <Text style={styles.sectionLabel}>Location</Text>
+
+                <View
+                  style={{
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    marginBottom: 20,
+                    position: "relative",
+                  }}
+                >
+                  <MapView
+                    style={{ height: 250 }}
+                    region={mapRegion}
+                    onRegionChangeComplete={(region) => setMapRegion(region)}
+                  />
+
+                  {/* Fixed Crosshair */}
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: [{ translateX: -15 }, { translateY: -30 }],
+                    }}
+                  >
+                    <Ionicons name="location" size={30} color="#D62828" />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#0057B8",
+                    padding: 14,
+                    borderRadius: 12,
+                    marginBottom: 10,
+                  }}
+                  onPress={getUserLocation}
+                >
+                  <Text
+                    style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}
+                  >
+                    Use My Current Location
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "#2A9D8F",
+                    padding: 14,
+                    borderRadius: 12,
+                    marginBottom: 12,
+                  }}
+                  onPress={() => {
+                    setUserLocation({
+                      latitude: mapRegion.latitude,
+                      longitude: mapRegion.longitude,
+                    });
+
+                    Alert.alert(
+                      "Location Saved",
+                      `Lat: ${mapRegion.latitude.toFixed(6)}\nLng: ${mapRegion.longitude.toFixed(6)}`
+                    );
+                  }}
+                >
+                  <Text
+                    style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}
+                  >
+                    Confirm Location
+                  </Text>
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 20,
+                  }}
+                >
+                  <Text>
+                    Latitude:{" "}
+                    {userLocation ? userLocation.latitude.toFixed(6) : "Not selected"}
+                  </Text>
+                  <Text>
+                    Longitude:{" "}
+                    {userLocation ? userLocation.longitude.toFixed(6) : "Not selected"}
+                  </Text>
+                </View>
+
+                <View style={styles.stepBtnRow}>
+                  <TouchableOpacity style={styles.backStepBtn} onPress={goBack}>
+                    <Text style={styles.backStepBtnText}>Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.submitBtnHalf, isLoading && styles.submitBtnDisabled]}
+                    onPress={handleRegister}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.submitBtnText}>Create Account →</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
             <View style={styles.loginRow}>
               <Text style={styles.loginPrompt}>Already have an account? </Text>
@@ -404,7 +488,7 @@ export default function RegisterCitizen() {
   );
 }
 
-// ── Reusable input inside this file ──
+// ── Reusable text input ──
 function InputField({
   placeholder,
   value,
@@ -431,7 +515,75 @@ function InputField({
   );
 }
 
+// ── Simple modal-based dropdown (no extra library needed) ──
+function DropdownField({ label, icon, value, options, onSelect }) {
+  const [visible, setVisible] = useState(false);
 
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.inputWrapper}
+        activeOpacity={0.7}
+        onPress={() => setVisible(true)}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.dropdownLabel}>{label}</Text>
+          <Text style={styles.dropdownValue}>{value}</Text>
+        </View>
+        {icon && <Ionicons name={icon} size={18} color="#9CA3AF" />}
+        <Ionicons
+          name="chevron-down"
+          size={16}
+          color="#9CA3AF"
+          style={{ marginLeft: 6 }}
+        />
+      </TouchableOpacity>
+
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{label}</Text>
+            <FlatList
+              data={options}
+              keyExtractor={(item) => item}
+              style={{ maxHeight: 320 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => {
+                    onSelect(item);
+                    setVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      item === value && styles.optionTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  {item === value && (
+                    <Ionicons name="checkmark" size={18} color="#0057B8" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
+  );
+}
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F0F2FF" },
@@ -523,53 +675,105 @@ const styles = StyleSheet.create({
     color: "#1F2937",
   },
 
-  // Standby card
-  standbyCard: {
-    flexDirection: "row",
-    backgroundColor: "#EEF3FF",
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 8,
-    marginBottom: 24,
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  standbyIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#DBEAFE",
-    justifyContent: "center",
-    alignItems: "center",
+  // Dropdown field text
+  dropdownLabel: {
+    fontSize: 11,
+    color: "#9CA3AF",
     marginTop: 2,
   },
-  standbyText: { flex: 1 },
-  standbyTitle: {
+  dropdownValue: {
+    fontSize: 15,
+    color: "#1F2937",
+    marginBottom: 2,
+  },
+
+  // Dropdown modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  modalTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#1F2937",
-    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    paddingTop: 4,
   },
-  standbyDesc: {
-    fontSize: 13,
-    color: "#6B7280",
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  standbyToggleRow: {
+  optionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-  standbyToggleLabel: {
-    fontSize: 13,
+  optionText: {
+    fontSize: 15,
     color: "#1F2937",
+  },
+  optionTextSelected: {
+    color: "#0057B8",
+    fontWeight: "700",
+  },
+
+  // Step navigation buttons
+  nextBtn: {
+    backgroundColor: "#0057B8",
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 8,
+  },
+  nextBtnHalf: {
     flex: 1,
-    marginRight: 8,
+    backgroundColor: "#0057B8",
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  nextBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  stepBtnRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  backStepBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#0057B8",
+  },
+  backStepBtnText: {
+    color: "#0057B8",
+    fontSize: 16,
+    fontWeight: "700",
   },
 
   // Submit
-  submitBtn: {
+  submitBtnHalf: {
+    flex: 1,
     backgroundColor: "#0057B8",
     height: 56,
     borderRadius: 28,
@@ -580,7 +784,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-    marginBottom: 20,
   },
   submitBtnDisabled: { opacity: 0.7 },
   submitBtnText: {

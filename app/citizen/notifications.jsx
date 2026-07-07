@@ -22,8 +22,7 @@ export default function NotificationsSheet({ isOpen, onClose }) {
     };
   }, [isOpen]);
 
-  // Only truly "actionable" cards (payment pending, not yet reviewed) are protected from auto-clear.
-  // Everything else (dispatched-in-transit, already-reviewed) is safe to permanently clear once seen.
+  // Only cards (payment pending, not yet reviewed) are protected from auto-clear.
   const isActionRequired = (incident) => {
     const needsPayment = incident.status === "completed" || incident.status === "pending_payment" || incident.paymentPending === true;
     const alreadyReviewed = incident.rating != null;
