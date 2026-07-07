@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  Image,
 } from "react-native";
 
 import { useRouter } from "expo-router";
@@ -25,16 +26,8 @@ export default function WelcomeScreen() {
 
         {/* Logo + Branding */}
         <View style={styles.brandingContainer}>
-          <View style={styles.logoWrapper}>
-            {/* Map pin with medical cross — inline SVG-style using View */}
-            <View style={styles.logoOuter}>
-              <View style={styles.logoPin}>
-                <View style={styles.crossHorizontal} />
-                <View style={styles.crossVertical} />
-              </View>
-              <View style={styles.logoPinPoint} />
-            </View>
-          </View>
+          {/* MediGo Logo */}
+          <Image source={require("../../assets/images/MediGo_favicon.png")} style={styles.logo} />
 
           <Text style={styles.appName}>MediGo</Text>
           <Text style={styles.tagline}>Emergency care, instantly.</Text>
@@ -88,47 +81,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  logoWrapper: {
+  logo: {
+    width: 160,
+    height: 160,
     marginBottom: 24,
-  },
-  logoOuter: {
-    width: 90,
-    height: 110,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  logoPin: {
-    width: 52,
-    height: 52,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    borderRadius: 26,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  crossHorizontal: {
-    position: "absolute",
-    width: 28,
-    height: 10,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 3,
-  },
-  crossVertical: {
-    position: "absolute",
-    width: 10,
-    height: 28,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 3,
-  },
-  logoPinPoint: {
-    width: 14,
-    height: 14,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    borderRadius: 7,
-    marginTop: 6,
-    transform: [{ rotate: "45deg" }],
+    resizeMode: "contain",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   appName: {
     fontSize: 38,
