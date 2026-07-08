@@ -250,11 +250,11 @@ export default function RequestsScreen({ autoTriggerRequestId, clearAutoTrigger 
                   {isDispatched && (
                     <View style={styles.trackingSummary}>
                       <Text style={styles.trackingTitle}>Dispatched Fleet Details</Text>
-                      <Text style={styles.trackingDetail}>🚐 Vehicle: {req.plateNumber}</Text>
-                      <Text style={styles.trackingDetail}>🧑‍⚕️ Driver: {req.driverName}</Text>
-                      <Text style={styles.trackingDetail}>⏱️ ETA Selected: {req.estimatedArrivalMinutes} Mins</Text>
+                      <Text style={styles.trackingDetail}>Vehicle: {req.plateNumber}</Text>
+                      <Text style={styles.trackingDetail}>Driver: {req.driverName}</Text>
+                      <Text style={styles.trackingDetail}>ETA Selected: {req.estimatedArrivalMinutes} Mins</Text>
                       {req.medicNotes ? (
-                        <Text style={styles.trackingDetail}>📝 Notes: {req.medicNotes}</Text>
+                        <Text style={styles.trackingDetail}>Notes: {req.medicNotes}</Text>
                       ) : null}
                     </View>
                   )}
