@@ -4,9 +4,6 @@ import {
 } from "react-native";
 import { Check, Plus, X, ChevronDown } from "lucide-react-native";
 
-// ── Same option lists used in register-citizen.jsx, minus "None" ──
-// ("None" doesn't make sense as an addable tag here — it's just the
-// registration default before anything is picked.)
 const CHRONIC_CONDITIONS = [
   "Hypertension",
   "Diabetes",
@@ -33,15 +30,19 @@ const ALLERGIES = [
   "Chlorhexidine",
 ];
 
-export default function MedicalTagsCard({ conditions = [], allergies = [], onSave, onError }) {
+export default function MedicalTagsCard({ conditions, allergies, onSave, onError }) {
+  // ── Safe arrays — guard against undefined/null at all times ──
+  const safeConditions = Array.isArray(conditions) ? conditions : [];
+  const safeAllergies = Array.isArray(allergies) ? allergies : [];
+
   const [addingTag, setAddingTag] = useState(false);
-  const [newTagType, setNewTagType] = useState("condition"); // "condition" | "allergy"
+  const [newTagType, setNewTagType] = useState("condition");
   const [selectedOption, setSelectedOption] = useState(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const optionsForType = newTagType === "condition" ? CHRONIC_CONDITIONS : ALLERGIES;
-  const alreadyAdded = newTagType === "condition" ? conditions : allergies;
+  const alreadyAdded = newTagType === "condition" ? safeConditions : safeAllergies;
   const availableOptions = optionsForType.filter((opt) => !alreadyAdded.includes(opt));
 
   const handleCancelAdd = () => {
@@ -57,10 +58,11 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
   const handleConfirmAddTag = async () => {
     if (!selectedOption) return;
 
+    // ── Use safe arrays here, not raw props ──
     const updatedConditions =
-      newTagType === "condition" ? [...conditions, selectedOption] : conditions;
+      newTagType === "condition" ? [...safeConditions, selectedOption] : safeConditions;
     const updatedAllergies =
-      newTagType === "allergy" ? [...allergies, selectedOption] : allergies;
+      newTagType === "allergy" ? [...safeAllergies, selectedOption] : safeAllergies;
 
     setSubmitting(true);
     try {
@@ -80,10 +82,11 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
   };
 
   const handleRemoveTag = async (type, index) => {
+    // ── Use safe arrays here, not raw props ──
     const updatedConditions =
-      type === "condition" ? conditions.filter((_, i) => i !== index) : conditions;
+      type === "condition" ? safeConditions.filter((_, i) => i !== index) : safeConditions;
     const updatedAllergies =
-      type === "allergy" ? allergies.filter((_, i) => i !== index) : allergies;
+      type === "allergy" ? safeAllergies.filter((_, i) => i !== index) : safeAllergies;
 
     setSubmitting(true);
     try {
@@ -129,6 +132,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
                 Condition
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.typeChip,
@@ -147,6 +151,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
                 Allergy
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.cancelAddButton} onPress={handleCancelAdd}>
               <X color="#6B7280" size={16} />
             </TouchableOpacity>
@@ -184,7 +189,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
         </View>
       )}
 
-      {/* Dropdown modal — same list-picker pattern as registration */}
+      {/* Dropdown modal */}
       <Modal
         visible={pickerVisible}
         transparent
@@ -223,9 +228,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
                   >
                     {item}
                   </Text>
-                  {item === selectedOption && (
-                    <Check color="#0066FF" size={16} />
-                  )}
+                  {item === selectedOption && <Check color="#0066FF" size={16} />}
                 </TouchableOpacity>
               )}
             />
@@ -233,8 +236,9 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
         </TouchableOpacity>
       </Modal>
 
+      {/* Pills — use safeConditions and safeAllergies, never raw props */}
       <View style={styles.pillsWrap}>
-        {conditions.map((value, index) => (
+        {safeConditions.map((value, index) => (
           <View key={`condition-${index}-${value}`} style={styles.conditionPill}>
             <Text style={styles.conditionPillText}>{value}</Text>
             <TouchableOpacity onPress={() => handleRemoveTag("condition", index)}>
@@ -242,7 +246,7 @@ export default function MedicalTagsCard({ conditions = [], allergies = [], onSav
             </TouchableOpacity>
           </View>
         ))}
-        {allergies.map((value, index) => (
+        {safeAllergies.map((value, index) => (
           <View key={`allergy-${index}-${value}`} style={styles.allergyPill}>
             <Text style={styles.allergyPillText}>{value}</Text>
             <TouchableOpacity onPress={() => handleRemoveTag("allergy", index)}>
@@ -302,33 +306,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  typeChipActive: {
-    backgroundColor: "#0066FF",
-  },
+  typeChipActive: { backgroundColor: "#0066FF" },
   typeChipInactive: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#0066FF",
   },
-  typeChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  typeChipTextActive: {
-    color: "#FFFFFF",
-  },
-  typeChipTextInactive: {
-    color: "#0066FF",
-  },
-  cancelAddButton: {
-    marginLeft: "auto",
-    padding: 4,
-  },
-  addInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  typeChipText: { fontSize: 12, fontWeight: "600" },
+  typeChipTextActive: { color: "#FFFFFF" },
+  typeChipTextInactive: { color: "#0066FF" },
+  cancelAddButton: { marginLeft: "auto", padding: 4 },
+  addInputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   dropdownButton: {
     flex: 1,
     flexDirection: "row",
@@ -339,15 +327,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  dropdownButtonText: {
-    fontSize: 14,
-    color: "#0A0F2C",
-    flex: 1,
-    marginRight: 8,
-  },
-  dropdownPlaceholder: {
-    color: "#6B7280",
-  },
+  dropdownButtonText: { fontSize: 14, color: "#0A0F2C", flex: 1, marginRight: 8 },
+  dropdownPlaceholder: { color: "#6B7280" },
   confirmAddButton: {
     width: 36,
     height: 36,
@@ -356,14 +337,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  confirmAddButtonDisabled: {
-    backgroundColor: "#B7CFFF",
-  },
-  pillsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+  confirmAddButtonDisabled: { backgroundColor: "#B7CFFF" },
+  pillsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   conditionPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -373,11 +348,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     gap: 6,
   },
-  conditionPillText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#0047B3",
-  },
+  conditionPillText: { fontSize: 12, fontWeight: "500", color: "#0047B3" },
   allergyPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -387,12 +358,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     gap: 6,
   },
-  allergyPillText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#C62828",
-  },
-  // Dropdown modal
+  allergyPillText: { fontSize: 12, fontWeight: "500", color: "#C62828" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -422,14 +388,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
   },
-  optionText: {
-    fontSize: 15,
-    color: "#0A0F2C",
-  },
-  optionTextSelected: {
-    color: "#0066FF",
-    fontWeight: "700",
-  },
+  optionText: { fontSize: 15, color: "#0A0F2C" },
+  optionTextSelected: { color: "#0066FF", fontWeight: "700" },
   emptyOptionsText: {
     fontSize: 13,
     color: "#6B7280",
