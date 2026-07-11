@@ -128,7 +128,7 @@ export default function CitizenDashboard() {
     setLocationModalVisible(true);
   };
 
-  // Only used by the Emergency path now (Standby routes through the issue picker instead)
+  // Only used by the Emergency SOS button
   const dispatchRequest = (latitude, longitude) => {
     if (pendingRequestType === "emergency") {
       sendEmergencyRequest(latitude, longitude);

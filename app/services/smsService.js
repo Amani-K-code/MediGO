@@ -47,7 +47,7 @@ export const triggerSMSFallback = async (recipientPhone) => {
         Clipboard.setString(smsMessage);
         await Linking.openURL(smsUrl);
     } else {
-        // Notification of copy to ckipboard
+        // Notification of copy to clipboard
         Clipboard.setString(smsMessage);
         Alert.alert(
             "SMS Copied",
